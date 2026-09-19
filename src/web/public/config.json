@@ -1,0 +1,9 @@
+{
+  "environmentName": "local",
+  "apiBaseUrl": "/api",
+  "auth": {
+    "authority": "https://localhost:5001",
+    "clientId": "coffeeg-web",
+    "audience": "coffeeg-api"
+  }
+}

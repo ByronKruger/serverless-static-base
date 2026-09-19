@@ -1,0 +1,15 @@
+<div
+  class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] xl:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_minmax(0,20rem)]"
+>
+  <div class="min-w-0">
+    <ng-content select="[slot=start]" />
+  </div>
+
+  <div class="min-w-0">
+    <ng-content />
+  </div>
+
+  <div class="min-w-0">
+    <ng-content select="[slot=end]" />
+  </div>
+</div>
