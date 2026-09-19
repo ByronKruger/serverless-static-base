@@ -1,3 +1,26 @@
 :host {
   display: block;
 }
+
+/*
+ * The header's content band is the page content container - same horizontal padding as
+ * nz-content, same 100rem cap, centred the same way - so the nav starts on the left
+ * rail's left edge and the auth buttons end on the right rail's right edge.
+ *
+ * The brand is out of flow in the gutter left of that band, which only exists once the
+ * viewport is wider than the cap. Until then the band reserves a brand-sized slot so the
+ * two never collide: the header's content box is 100%, the band is at most 100rem, so
+ * each gutter is (100% - 100rem) / 2 and the reserve reaches 0 exactly where that clears
+ * the brand. Below md the brand is back in flow and needs no reserve at all.
+ */
+@media (min-width: 769px) {
+  .shell-bar {
+    --shell-brand: 7rem;
+
+    padding-inline-start: clamp(
+      0px,
+      calc(100rem + 2 * var(--shell-brand) - 100%),
+      var(--shell-brand)
+    );
+  }
+}
