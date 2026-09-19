@@ -1,0 +1,24 @@
+<Project>
+
+  <!--
+    Repo-wide MSBuild defaults. Project files stay small and only declare what is
+    specific to them. See Docs/ARCHITECTURE.md for the locks these encode.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!--
+      Must stay false: Microsoft.Data.SqlClient resolves collations through culture data
+      and throws "en-us is an invalid culture identifier" under invariant mode, so
+      SQL Server (D-0003) and invariant globalization cannot both be had.
+    -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+</Project>

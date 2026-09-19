@@ -1,0 +1,10 @@
+# EF Core scaffolds these files; their shape is the tool's choice, not ours.
+# Without this, repo style rules (file-scoped namespaces, collection expressions, ...)
+# fail the build via TreatWarningsAsErrors every time a migration is generated.
+[*.cs]
+generated_code = true
+dotnet_analyzer_diagnostic.severity = none
+dotnet_diagnostic.IDE0161.severity = none
+dotnet_diagnostic.IDE0300.severity = none
+dotnet_diagnostic.IDE0301.severity = none
+dotnet_diagnostic.IDE0090.severity = none

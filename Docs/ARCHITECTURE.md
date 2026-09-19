@@ -18,9 +18,9 @@
 - AuthZ: policy-based permissions at the endpoint; resource/ownership rules in the application layer. Named policies, not ad-hoc role strings. Every new controller authorized by default.
 - JSON: System.Text.Json, camelCase, UTC timestamps as ISO-8601.
 - DI composition root: Program.cs only.
-- Persistence: behind Infrastructure. Code-first EF Core; entities never become API contracts.
+- Persistence: behind the repository ports in `Interfaces/Repositories`, implemented in `Repositories/` over the `DbContext` in `Data/` (D-0002). No layer above a repository sees `DbContext`, EF entities, or `IQueryable`. Code-first EF Core; entities never become API contracts.
 - Tests required for every new endpoint: handler unit test + API integration test.
-- Request pipeline (middleware order). (X)
+- Request pipeline (middleware order). Fixed in `Extensions/WebApplicationExtensions.cs` and changed only with a decision entry: exception handler -> status code pages -> OpenAPI (development only, anonymous) -> HTTPS redirection -> CORS -> authentication -> authorization -> controllers. The exception handler is first so nothing downstream can leak an unhandled exception; CORS precedes authentication so a rejected pre-flight still carries its headers.
 - Result pattern and exceptions. Expected failure is data. Unexpected failure is an exception. Do not throw NotFoundException as control flow if the handler already returns Result. Do not catch Exception in handlers and return 200.
 - DI, configuration, options. Container is the composition root. Options fail fast at startup. `IOptions<T>` with validation attributes. Missing secrets = process does not start.
 - Testing: `tests/Application.Tests`: `{Resource}Service` in isolation. Fake ports only (`IOrderStore`, `IClock`, `ICurrentUser`). No ASP.NET, no `DbContext`, no database. `tests/Api.Tests`: `WebApplicationFactory`. Hit HTTP. Assert status, response DTO shape, Problem Details (`type`, `title`, `status`, `traceId`). Name tests by layer: `Services/{Resource}ServiceTests`, `{Resource}ControllerTests`.Do not new up controllers with a mocked service as the API test. That skips the pipeline (auth, Problem Details, binding). Do not spin Kestrel + EF to test a service method. If you must, the service is not isolated.
@@ -50,17 +50,56 @@
 
 ### ASP.NET server-application
 
-src/api src/api/Interfaces (with nesting for /Repositories, /Services, etc.) src/api/Services src/api/Repositories src/api/Helpers src/api/Dtos src/api/Results src/api/Exceptions src/api/Entities src/api/Validation src/api/Controllers src/api/MapperProfiles src/api/Extensions src/api/
+One project, horizontal folders (D-0002). Every folder below has exactly one meaning;
+a file that does not obviously belong to one of them signals a missing decision.
+
+```
+src/api/
+  Authorization/        # Policies and Roles name constants - no ad-hoc role strings elsewhere
+  Controllers/          # thin actions on ApiControllerBase
+  Data/                 # CoffeegDbContext, Configurations/, Migrations/
+  Dtos/                 # Create/Update requests, responses, [FromQuery] models
+  Entities/             # EF entities - never API contracts
+  Exceptions/           # exception types and the global exception handler
+  Extensions/           # registration, request pipeline, Result -> ActionResult
+  Helpers/              # adapters for platform ports (clock, current user, route casing)
+  Interfaces/           # ports, nested by kind
+    Repositories/
+    Services/
+  MapperProfiles/       # AutoMapper profiles
+  Options/              # options classes with validation attributes, and their configurators
+  Repositories/         # port implementations over the DbContext
+  Results/              # Result, Result<T>, Error, ErrorType
+  Services/             # {Resource}Service - one public method per use case
+  Validation/           # one validator per request type, plus the edge filter
+  Program.cs            # the only composition root: AddCoffeegApi + UseCoffeegApiPipeline
+
+tests/
+  Application.Tests/    # services in isolation, fake ports only
+  Api.Tests/            # WebApplicationFactory, real pipeline, over HTTP
+```
 
 ### Angular Web-app
 
-src/app/
-  core/                 # auth, interceptors, error handler, config - root singletons
+```
+src/web/src/app/
+  core/                 # true singletons, used once per app
+    auth/               # AuthStore, auth interceptor, role names
+    config/             # AppConfig contract and the pre-bootstrap loader
+    errors/             # global ErrorHandler and the reporting sink token
+    http/               # ApiError model, error-mapping and tracing interceptors
+    icons/              # the one icon set, registered explicitly
+    layout/             # app shell and its routed chrome
   shared/ui/            # presentational primitives and patterns only
   shared/utils/         # pure functions, no feature imports
-  `features/<name>/`      # routes, pages, feature store, data-access
-  app.routes.ts
-  app.config.ts
+  features/<name>/      # routes, pages, feature store, data-access
+  app.routes.ts         # one lazy route per feature
+  app.config.ts         # root providers only
+```
+
+Runtime settings are fetched from `public/config.json` before bootstrap and read by
+injecting `APP_CONFIG`. There is no `environment.ts`: one built artifact is promoted
+across environments.
 
 ## Vertical slice feature recipe (agents start here)
 

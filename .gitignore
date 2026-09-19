@@ -1,0 +1,47 @@
+# ---------------------------------------------------------------------------
+# .NET
+# ---------------------------------------------------------------------------
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+*.user
+*.suo
+*.userprefs
+*.rsuser
+.vs/
+TestResults/
+[Cc]overage*/
+*.coverage
+*.coveragexml
+BenchmarkDotNet.Artifacts/
+msbuild.log
+msbuild.err
+msbuild.wrn
+
+# Local secrets. Never commit a connection string or a client secret.
+appsettings.*.Local.json
+secrets.json
+*.pfx
+
+# ---------------------------------------------------------------------------
+# Node / Angular
+# ---------------------------------------------------------------------------
+node_modules/
+dist/
+.angular/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log
+.vitest/
+
+# ---------------------------------------------------------------------------
+# Editors and OS
+# ---------------------------------------------------------------------------
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.DS_Store
+Thumbs.db
