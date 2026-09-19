@@ -1,6 +1,11 @@
 <nz-layout class="min-h-screen">
-  <nz-header class="flex items-center justify-between gap-4 px-4 md:px-6">
-    <div class="flex items-center gap-3">
+  <!-- Ant sizes the header at 64px and sets a matching line-height that the horizontal
+       menu inherits (.ant-layout-header .ant-menu { line-height: inherit }), so the bar is
+       laid out with flex around that height rather than against it. -->
+  <nz-header class="relative flex h-16 items-center px-4 md:px-6 lg:px-8">
+    <!-- The brand sits in the gutter beside the content band, pinned to the header's own
+         padding edge. Below md there is no gutter, so it takes its place in the row. -->
+    <div class="flex shrink-0 items-center gap-3 md:absolute md:inset-y-0 md:left-6 lg:left-8">
       <button
         nz-button
         nzType="text"
@@ -15,42 +20,46 @@
 
       <a routerLink="/" class="flex items-center gap-2 text-base font-semibold">
         <nz-icon nzType="coffee" />
-        <span>Coffeeg</span>
+        <span class="truncate">Coffeeg</span>
       </a>
     </div>
 
-    <!-- Feature navigation items are added here as features are mounted. -->
-    <ul
-      nz-menu
-      id="shell-nav"
-      nzTheme="dark"
-      nzMode="horizontal"
-      class="hidden flex-1 md:flex"
-      [class.!flex]="navOpen()"
-    >
-      <li nz-menu-item routerLinkActive="ant-menu-item-selected" (click)="closeNav()">
-        <a routerLink="/">Home</a>
-      </li>
-    </ul>
+    <!-- Same container as nz-content, so the nav starts on the left rail's left edge and
+         the auth buttons end on the right rail's right edge. -->
+    <div class="shell-bar mx-auto flex h-full max-w-[100rem] flex-1 items-center gap-4">
+      <!-- Feature navigation items are added here as features are mounted. -->
+      <ul
+        nz-menu
+        id="shell-nav"
+        nzTheme="dark"
+        nzMode="horizontal"
+        class="hidden min-w-0 flex-1 md:flex"
+        [class.!flex]="navOpen()"
+      >
+        <li nz-menu-item routerLinkActive="ant-menu-item-selected" (click)="closeNav()">
+          <a routerLink="/">Home</a>
+        </li>
+      </ul>
 
-    @if (isAuthenticated()) {
-      <div class="flex shrink-0 items-center gap-2">
-        <span class="flex items-center gap-2" data-testid="signed-in-user">
-          <nz-icon nzType="user" />
-          <span class="max-w-[10rem] truncate font-medium">{{ userName() }}</span>
-        </span>
+      @if (isAuthenticated()) {
+        <div class="ms-auto flex shrink-0 items-center gap-2">
+          <span class="flex items-center gap-2" data-testid="signed-in-user">
+            <nz-icon nzType="user" />
+            <span class="max-w-[10rem] truncate font-medium">{{ userName() }}</span>
+          </span>
 
-        <button nz-button nzType="text" (click)="signOut()">
-          <nz-icon nzType="logout" />
-          <span class="hidden sm:inline">Log out</span>
-        </button>
-      </div>
-    } @else {
-      <div class="flex shrink-0 items-center gap-2">
-        <a nz-button nzType="text" routerLink="/auth/login">Sign in</a>
-        <a nz-button nzType="primary" routerLink="/auth/register">Register</a>
-      </div>
-    }
+          <button nz-button nzType="text" (click)="signOut()">
+            <nz-icon nzType="logout" />
+            <span class="hidden sm:inline">Log out</span>
+          </button>
+        </div>
+      } @else {
+        <div class="ms-auto flex shrink-0 items-center gap-2">
+          <a nz-button nzType="text" routerLink="/auth/login">Sign in</a>
+          <a nz-button nzType="primary" routerLink="/auth/register">Register</a>
+        </div>
+      }
+    </div>
   </nz-header>
 
   <nz-content class="px-4 py-6 md:px-6 lg:px-8">

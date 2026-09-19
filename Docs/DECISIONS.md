@@ -19,6 +19,7 @@ When this file becomes hard to scan (roughly 8-15 accepted entries, or one entry
 | D-0009 | Users keyed by an int surrogate; email is the natural key and the sign-in credential | Accepted | 2026-09-18 |
 | D-0010 | The API issues its own access tokens | Accepted | 2026-09-18 |
 | D-0011 | The access token lives in localStorage | Accepted | 2026-09-18 |
+| D-0012 | ng-zorro's stylesheet is imported into a cascade layer below Tailwind's utilities | Proposed | 2026-09-19 |
 
 ## Template (copy for each new entry)
 
@@ -317,3 +318,29 @@ Consequences
 - Bad: XSS becomes account takeover for the life of the token, which is why the lifetime is bounded and why the app must never render untrusted HTML.
 - Bad: the token is visible to anything else running on the origin, including a compromised dependency.
 - Follow-up: revisit alongside token revocation (D-0010) before handling anything more sensitive than drink preferences.
+
+---
+
+## D-0012 - ng-zorro's stylesheet is imported into a cascade layer below Tailwind's utilities
+
+Status: Proposed
+Date: 2026-09-19
+Deciders: proposed by agent, pending human
+
+Context
+- D-0007 imports Tailwind's theme and utilities into named cascade layers, while `ng-zorro-antd.min.css` was listed in `angular.json` and therefore shipped unlayered. Unlayered CSS outranks every layered rule regardless of specificity, so ng-zorro silently won every property it declares and the Tailwind utilities the templates place on Ant components were inert. The shell header showed the result: `nz-header { display: block }` beat `flex`, so the brand, the nav and the auth buttons each took their own line; `.ant-layout-header { padding: 0 50px }` beat `px-4 md:px-6`; `.ant-btn { display: inline-block }` beat `md:hidden`, so the mobile nav toggle was visible on desktop.
+
+Decision
+- In the context of running Tailwind utilities on top of Ant Design components, facing an unlayered component library that outranks every utility, we chose to import `ng-zorro-antd.min.css` from `src/styles.css` into a named `ng-zorro` layer ordered below `components` and `utilities` to achieve the layering D-0007 already assumes, accepting that a Tailwind utility now beats Ant on any property they both set, so the "no overrides" rule in `Docs/ARCHITECTURE.md` becomes a review convention rather than something the cascade enforces.
+
+Options considered
+- Import ng-zorro into a layer below `utilities` (chosen): one line, and every existing template starts behaving the way it reads.
+- Per-component stylesheet overrides: an emulated-encapsulation selector is unlayered and outranks ng-zorro by specificity, but it repairs one component at a time and leaves the same trap for the next one.
+- `!important` on the affected utilities: wins, but spreads through every template that styles an Ant component.
+
+Consequences
+- Good: `layout, spacing, type and responsive behaviour via Tailwind` (`Docs/ARCHITECTURE.md`) is now true of Ant components too, not only of plain elements.
+- Good: the layer order is declared in one place, `src/styles.css`, next to the breakpoints and tokens.
+- Bad: ng-zorro's 560 kB stylesheet is now inlined into `styles.css` by Tailwind's import bundler rather than emitted as its own file, so it is one bundle and one cache entry instead of two.
+- Bad: an accidental utility can now change an Ant component's look without anyone noticing, which is exactly what D-0007 wanted to prevent.
+- Follow-up: Ant's own invariants must be respected rather than overridden. `.ant-layout-header .ant-menu { line-height: inherit }` means the horizontal menu sizes itself from the header's 64px line-height, so a `leading-*` utility on `nz-header` collapses the menu items; the shell sets `h-16` and leaves the line-height alone.

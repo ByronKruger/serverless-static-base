@@ -6,8 +6,17 @@
  * deliberately not imported - it resets the element styles Ant Design's components
  * rely on. Importing the theme and utilities layers only is the supported way to
  * opt out of it.
+ *
+ * ng-zorro's stylesheet is imported here rather than from angular.json so it can be
+ * put in a cascade layer. Unlayered CSS beats every layered rule regardless of
+ * specificity, so while ng-zorro shipped unlayered it silently won every property it
+ * declares - `nz-header { display: block }` beat `flex`, `.ant-layout-header`'s
+ * `padding: 0 50px` beat `px-4`, `.ant-btn`'s `display: inline-block` beat `md:hidden`.
+ * Layering it below `utilities` restores the intended order: Ant Design supplies the
+ * component, a Tailwind utility placed on that component wins.
  */
-@layer theme, base, components, utilities;
+@layer theme, base, ng-zorro, components, utilities;
+@import 'ng-zorro-antd/ng-zorro-antd.min.css' layer(ng-zorro);
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
 
