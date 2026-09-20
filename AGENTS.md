@@ -42,6 +42,10 @@ This file is the shared source of truth for repo conventions for all agents. Kee
 - Put new design specs under `Docs/superpowers/specs/` and implementation plans under `Docs/superpowers/plans/`.
 - Keep plans updated with decisions, verification commands, and open questions.
 
+## Superpowers stop condition
+
+- After requirements/grill, write a spec. After spec approval, write a plan. Stop. Do not invoke executing-plans, subagent-driven-development, bootstrap skills, or application code until the human has read that plan file and replied with an explicit go (e.g. “execute the plan” plus an execution method). Existence of `Docs/superpowers/plans/*.md` is not authorization.
+
 ## Architecture decisions
 
 - This file (`AGENTS.md`) does not record decisions. It only tells you how to read and write them.
