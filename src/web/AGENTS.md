@@ -71,6 +71,39 @@ Pages never call `AuthApi` or `HttpClient` directly; they call the store and sub
 Server-side field messages are read with `fieldErrorsFor()`, which matches the API's
 `UserName` against the control's `userName` case-insensitively.
 
+## Beverage preferences
+
+`features/preferences/` is the second feature and the template to copy: lazy route, store
+and API service on the route's `providers`, transport types confined to `data-access/`,
+and its own icons registered in `preferences.routes.ts` rather than in `core/icons`.
+
+The create form is **built from the API response**, not from anything written here. No
+drink, ingredient or unit name appears in the TypeScript or the template. A moderator
+adding a beverage type changes this page without anyone editing it - that is the point.
+
+`data-access/preferences.models.ts` is the one place worth reading first. Its mapping is
+not a rename: the API describes a *catalogue* (an ingredient, which may have variants),
+and the form needs *slots* (a thing to decide about, with one or more options). A simple
+ingredient becomes a slot with exactly one option, so the template never branches on
+"simple or complex" - it just renders a select when `requiresChoice` is true.
+
+Two traps the tests pin down:
+
+- **The unit belongs to the option, not the slot.** Two variants of one ingredient may be
+  measured differently, so `unitFor()` reads the chosen option and `chooseOption()` resets
+  the amount when the choice changes.
+- **The API omits nulls** (`WhenWritingNull`), so an absent amount arrives as `undefined`,
+  not `null`. `BeveragePreferenceIngredientResponse.amount` is typed `amount?: number |
+  null` and normalised with `?? null` on the way in. Skip that and "no ice" renders as
+  "Yes".
+
+A `Boolean` unit is a switch, and it maps to `1` for yes and `null` for no in exactly one
+place - `toAmount()` in the create page.
+
+`core/auth/authenticated.guard.ts` keeps signed-out people off these routes and passes a
+`returnUrl` the login page honours. It is a convenience, never the boundary: the API is
+default-deny and is what actually enforces access.
+
 ## Commands
 
 ```bash

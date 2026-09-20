@@ -39,6 +39,12 @@
         <li nz-menu-item routerLinkActive="ant-menu-item-selected" (click)="closeNav()">
           <a routerLink="/">Home</a>
         </li>
+
+        @if (isAuthenticated()) {
+          <li nz-menu-item routerLinkActive="ant-menu-item-selected" (click)="closeNav()">
+            <a routerLink="/preferences">My preferences</a>
+          </li>
+        }
       </ul>
 
       @if (isAuthenticated()) {

@@ -73,6 +73,37 @@ Identity lives behind `IUserRepository`, so `AuthService` is unit-testable witho
 Identity, EF, or a database. Do not inject `UserManager` anywhere except
 `Repositories/IdentityUserRepository.cs`.
 
+## Beverage preferences
+
+Two resources, four entities, and one rule worth internalising before you touch them.
+
+`BeverageTypes`, `Ingredients` and `UnitTypes` are **moderator-owned reference data**
+seeded by the `BeveragePreferences` migration (D-0013). There is no write endpoint for
+them in this project yet. Nothing in C# names a drink, an ingredient or a unit - the
+feature reads whatever rows exist, which is what "arbitrary beverage type" means here.
+Do not add a `switch` on a beverage or unit name; if you find yourself wanting one, the
+missing thing is a column on `UnitTypes`.
+
+`Ingredient` is self-referencing (D-0014). An ingredient with no `Variants` is *simple*;
+one with them is a *category*. `BeverageTypeIngredients` composes the **category**
+("Coffee is made with Milk"), and a preference line must name a **leaf** ("Soy milk").
+`BeveragePreferenceService.Choosable` is where that flattening happens, and it walks
+exactly one level - a three-level ingredient would be silently unpickable, so if one is
+ever seeded, that method and the include in `BeverageTypeRepository` both go recursive.
+
+The **unit comes from the ingredient**, never from the request (D-0015). An amount is one
+nullable `decimal(9,3)` read through `UnitType.Kind`: `Numeric` bounds it by the unit's
+range, `Boolean` accepts only 1 (yes) or null (no). Null is always legal - it is the
+domain's "none of this".
+
+Error codes live in `Results/BeverageErrors.cs`, not inline: both services return
+`beverage_type.not_found`, and both test suites assert the codes by name.
+
+Ownership is a **service** rule, applied from `ICurrentUser`, not a policy on the action.
+Every `IBeveragePreferenceRepository` method takes the user id so a query that forgets it
+cannot be written, and somebody else's preference is `preference.not_found` (404), never
+403.
+
 ## Commands
 
 ```bash

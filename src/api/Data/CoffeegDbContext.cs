@@ -14,6 +14,18 @@ namespace Coffeeg.Api.Data;
 public class CoffeegDbContext(DbContextOptions<CoffeegDbContext> options)
     : IdentityDbContext<AppUser, AppRole, int>(options)
 {
+    /// <summary>Beverage types a person may hold a preference for. Moderator-owned reference data.</summary>
+    public DbSet<BeverageType> BeverageTypes => Set<BeverageType>();
+
+    /// <summary>Ingredients, simple and complex. Moderator-owned reference data.</summary>
+    public DbSet<Ingredient> Ingredients => Set<Ingredient>();
+
+    /// <summary>Units an ingredient can be measured in. Moderator-owned reference data.</summary>
+    public DbSet<UnitType> UnitTypes => Set<UnitType>();
+
+    /// <summary>Saved preferences. Private to the person who created them.</summary>
+    public DbSet<BeveragePreference> BeveragePreferences => Set<BeveragePreference>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Identity's own mappings first - the configurations below refine them.

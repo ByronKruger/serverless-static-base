@@ -150,6 +150,352 @@ namespace Coffeeg.Api.Data.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("Coffeeg.Api.Entities.BeveragePreference", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BeverageTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BeverageTypeId");
+
+                    b.HasIndex("UserId", "BeverageTypeId")
+                        .IsUnique();
+
+                    b.ToTable("BeveragePreferences");
+                });
+
+            modelBuilder.Entity("Coffeeg.Api.Entities.BeveragePreferenceIngredient", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal?>("Amount")
+                        .HasPrecision(9, 3)
+                        .HasColumnType("decimal(9,3)");
+
+                    b.Property<int>("BeveragePreferenceId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IngredientId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IngredientId");
+
+                    b.HasIndex("BeveragePreferenceId", "IngredientId")
+                        .IsUnique();
+
+                    b.ToTable("BeveragePreferenceIngredients", (string)null);
+                });
+
+            modelBuilder.Entity("Coffeeg.Api.Entities.BeverageType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("BeverageTypes");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Description = "Brewed coffee, however you take it.",
+                            Name = "Coffee"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Description = "Neat, on the rocks, or with a splash of water.",
+                            Name = "Whiskey"
+                        });
+                });
+
+            modelBuilder.Entity("Coffeeg.Api.Entities.BeverageTypeIngredient", b =>
+                {
+                    b.Property<int>("BeverageTypeId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IngredientId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("BeverageTypeId", "IngredientId");
+
+                    b.HasIndex("IngredientId");
+
+                    b.ToTable("BeverageTypeIngredients", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            BeverageTypeId = 1,
+                            IngredientId = 1,
+                            SortOrder = 0
+                        },
+                        new
+                        {
+                            BeverageTypeId = 1,
+                            IngredientId = 2,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            BeverageTypeId = 1,
+                            IngredientId = 6,
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            BeverageTypeId = 2,
+                            IngredientId = 10,
+                            SortOrder = 0
+                        },
+                        new
+                        {
+                            BeverageTypeId = 2,
+                            IngredientId = 11,
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            BeverageTypeId = 2,
+                            IngredientId = 9,
+                            SortOrder = 2
+                        });
+                });
+
+            modelBuilder.Entity("Coffeeg.Api.Entities.Ingredient", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<int?>("ParentIngredientId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UnitTypeId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UnitTypeId");
+
+                    b.HasIndex("ParentIngredientId", "Name")
+                        .IsUnique()
+                        .HasFilter("[ParentIngredientId] IS NOT NULL");
+
+                    b.ToTable("Ingredients");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Description = "Ground coffee.",
+                            Name = "Coffee",
+                            UnitTypeId = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Description = "Pick which milk.",
+                            Name = "Milk",
+                            UnitTypeId = 2
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "Low-fat milk",
+                            ParentIngredientId = 2,
+                            UnitTypeId = 2
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "Raw milk",
+                            ParentIngredientId = 2,
+                            UnitTypeId = 2
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Name = "Soy milk",
+                            ParentIngredientId = 2,
+                            UnitTypeId = 2
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Description = "Pick which sweetener.",
+                            Name = "Sugar",
+                            UnitTypeId = 1
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Name = "White sugar",
+                            ParentIngredientId = 6,
+                            UnitTypeId = 1
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Name = "Honey",
+                            ParentIngredientId = 6,
+                            UnitTypeId = 1
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Description = "With or without a splash.",
+                            Name = "Water",
+                            UnitTypeId = 3
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Name = "Whiskey",
+                            UnitTypeId = 4
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Description = "With or without.",
+                            Name = "Ice",
+                            UnitTypeId = 3
+                        });
+                });
+
+            modelBuilder.Entity("Coffeeg.Api.Entities.UnitType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<decimal?>("MaxValue")
+                        .HasPrecision(9, 3)
+                        .HasColumnType("decimal(9,3)");
+
+                    b.Property<decimal?>("MinValue")
+                        .HasPrecision(9, 3)
+                        .HasColumnType("decimal(9,3)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Symbol")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("UnitTypes");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Kind = "Numeric",
+                            MaxValue = 20m,
+                            MinValue = 0m,
+                            Name = "Teaspoons",
+                            Symbol = "tsp"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Kind = "Numeric",
+                            MaxValue = 100m,
+                            MinValue = 0m,
+                            Name = "Percentage",
+                            Symbol = "%"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Kind = "Boolean",
+                            MaxValue = 1m,
+                            MinValue = 1m,
+                            Name = "Yes / no"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Kind = "Numeric",
+                            MaxValue = 10m,
+                            MinValue = 0m,
+                            Name = "Shots",
+                            Symbol = "shot"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Kind = "Numeric",
+                            MaxValue = 1000m,
+                            MinValue = 0m,
+                            Name = "Millilitres",
+                            Symbol = "ml"
+                        });
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
                 {
                     b.Property<int>("Id")
@@ -253,6 +599,81 @@ namespace Coffeeg.Api.Data.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Coffeeg.Api.Entities.BeveragePreference", b =>
+                {
+                    b.HasOne("Coffeeg.Api.Entities.BeverageType", "BeverageType")
+                        .WithMany()
+                        .HasForeignKey("BeverageTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Coffeeg.Api.Entities.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("BeverageType");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Coffeeg.Api.Entities.BeveragePreferenceIngredient", b =>
+                {
+                    b.HasOne("Coffeeg.Api.Entities.BeveragePreference", "BeveragePreference")
+                        .WithMany("Ingredients")
+                        .HasForeignKey("BeveragePreferenceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Coffeeg.Api.Entities.Ingredient", "Ingredient")
+                        .WithMany()
+                        .HasForeignKey("IngredientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BeveragePreference");
+
+                    b.Navigation("Ingredient");
+                });
+
+            modelBuilder.Entity("Coffeeg.Api.Entities.BeverageTypeIngredient", b =>
+                {
+                    b.HasOne("Coffeeg.Api.Entities.BeverageType", "BeverageType")
+                        .WithMany("Ingredients")
+                        .HasForeignKey("BeverageTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Coffeeg.Api.Entities.Ingredient", "Ingredient")
+                        .WithMany("BeverageTypes")
+                        .HasForeignKey("IngredientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("BeverageType");
+
+                    b.Navigation("Ingredient");
+                });
+
+            modelBuilder.Entity("Coffeeg.Api.Entities.Ingredient", b =>
+                {
+                    b.HasOne("Coffeeg.Api.Entities.Ingredient", "ParentIngredient")
+                        .WithMany("Variants")
+                        .HasForeignKey("ParentIngredientId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Coffeeg.Api.Entities.UnitType", "UnitType")
+                        .WithMany("Ingredients")
+                        .HasForeignKey("UnitTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ParentIngredient");
+
+                    b.Navigation("UnitType");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<int>", b =>
                 {
                     b.HasOne("Coffeeg.Api.Entities.AppRole", null)
@@ -302,6 +723,28 @@ namespace Coffeeg.Api.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Coffeeg.Api.Entities.BeveragePreference", b =>
+                {
+                    b.Navigation("Ingredients");
+                });
+
+            modelBuilder.Entity("Coffeeg.Api.Entities.BeverageType", b =>
+                {
+                    b.Navigation("Ingredients");
+                });
+
+            modelBuilder.Entity("Coffeeg.Api.Entities.Ingredient", b =>
+                {
+                    b.Navigation("BeverageTypes");
+
+                    b.Navigation("Variants");
+                });
+
+            modelBuilder.Entity("Coffeeg.Api.Entities.UnitType", b =>
+                {
+                    b.Navigation("Ingredients");
                 });
 #pragma warning restore 612, 618
         }

@@ -20,6 +20,18 @@ public sealed record Error(
     public static Error Validation(IReadOnlyDictionary<string, string[]> failures) =>
         new("validation.failed", "One or more validation errors occurred.", ErrorType.Validation, failures);
 
+    /// <summary>
+    /// A validation failure that is both branchable and highlightable: a stable code for
+    /// the client to switch on, plus the field the caller can actually fix. Domain rules
+    /// use this - a rule such as "that ingredient needs a variant chosen" is worth naming,
+    /// unlike the anonymous shape failures the edge filter produces.
+    /// </summary>
+    public static Error Validation(
+        string code,
+        string description,
+        IReadOnlyDictionary<string, string[]> failures) =>
+        new(code, description, ErrorType.Validation, failures);
+
     public static Error Unauthorized(string code, string description) =>
         new(code, description, ErrorType.Unauthorized);
 
