@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzFormModule } from 'ng-zorro-antd/form';
@@ -27,6 +27,10 @@ export class LoginPage {
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
 
+  /** Where the authenticated guard wanted to send them before it turned them back. */
+  private readonly returnUrl =
+    inject(ActivatedRoute).snapshot.queryParamMap.get('returnUrl') ?? '/';
+
   protected readonly form = inject(FormBuilder).nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required]],
@@ -49,7 +53,7 @@ export class LoginPage {
     this.error.set(null);
 
     this.auth.login(this.form.getRawValue()).subscribe({
-      next: () => void this.router.navigate(['/']),
+      next: () => void this.router.navigateByUrl(this.returnUrl),
       error: (error: unknown) => {
         this.submitting.set(false);
 

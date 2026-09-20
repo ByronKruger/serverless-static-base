@@ -15,6 +15,11 @@ export const routes: Routes = [
         loadComponent: () => import('./core/layout/start-page/start-page').then((m) => m.StartPage),
       },
       {
+        path: 'preferences',
+        loadChildren: () =>
+          import('./features/preferences/preferences.routes').then((m) => m.routes),
+      },
+      {
         path: 'auth',
         loadChildren: () => import('./features/auth/auth.routes').then((m) => m.routes),
       },

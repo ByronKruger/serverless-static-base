@@ -31,6 +31,8 @@ public static class PersistenceExtensions
 
         // Repository registrations go here, one line per port.
         services.AddScoped<IUserRepository, IdentityUserRepository>();
+        services.AddScoped<IBeverageTypeRepository, BeverageTypeRepository>();
+        services.AddScoped<IBeveragePreferenceRepository, BeveragePreferenceRepository>();
 
         return services;
     }

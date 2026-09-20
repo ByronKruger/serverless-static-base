@@ -20,6 +20,9 @@ When this file becomes hard to scan (roughly 8-15 accepted entries, or one entry
 | D-0010 | The API issues its own access tokens | Accepted | 2026-09-18 |
 | D-0011 | The access token lives in localStorage | Accepted | 2026-09-18 |
 | D-0012 | ng-zorro's stylesheet is imported into a cascade layer below Tailwind's utilities | Proposed | 2026-09-19 |
+| D-0013 | Beverage types, ingredients and units are moderator-owned reference data, seeded | Accepted | 2026-09-20 |
+| D-0014 | Ingredients are a self-referencing simple/complex hierarchy; only a leaf is choosable | Accepted | 2026-09-20 |
+| D-0015 | The unit is fixed by the ingredient; an amount is one nullable decimal | Accepted | 2026-09-20 |
 
 ## Template (copy for each new entry)
 
@@ -344,3 +347,84 @@ Consequences
 - Bad: ng-zorro's 560 kB stylesheet is now inlined into `styles.css` by Tailwind's import bundler rather than emitted as its own file, so it is one bundle and one cache entry instead of two.
 - Bad: an accidental utility can now change an Ant component's look without anyone noticing, which is exactly what D-0007 wanted to prevent.
 - Follow-up: Ant's own invariants must be respected rather than overridden. `.ant-layout-header .ant-menu { line-height: inherit }` means the horizontal menu sizes itself from the header's 64px line-height, so a `leading-*` utility on `nz-header` collapses the menu items; the shell sets `h-16` and leaves the line-height alone.
+
+---
+
+## D-0013 - Beverage types, ingredients and units are moderator-owned reference data, seeded
+
+Status: Accepted
+Date: 2026-09-20
+Deciders: ByronKruger (clarified in session, 2026-09-20)
+
+Context
+- The brief asked for a preference "of arbitrary beverage type" with units "also of arbitrary type". Read one way that means a person may coin a beverage type as they save a preference. `Docs/domain/user-permissions.md` says the opposite: moderators manage beverage types and their ingredients.
+- Clarified in session: "arbitrary" means the feature must not hard-code a fixed set - it has to work against whatever rows exist. It does not mean a person may add rows. Moderator management of those rows was declared already built and out of this slice.
+
+Decision
+- In the context of building preference creation, facing a brief that could be read as letting anyone coin a beverage type, we chose to treat beverage types, ingredients and unit types as moderator-owned reference data seeded by the migration, with no create/update endpoint in this slice and no beverage or unit ever named in API or web code, to achieve a feature that works for any catalogue a moderator builds, accepting that the catalogue cannot be changed at runtime until the moderator screens exist.
+
+Options considered
+- Seeded moderator-owned catalogue, preferences reference it (chosen).
+- Any user may extend the shared catalogue: satisfies the loosest reading of "arbitrary", but strands the moderator role and lets one person's typo become everyone's dropdown entry.
+- Free text on the preference row: no catalogue at all, so "one preference per beverage type" degrades to string comparison and units can never be offered back for reuse.
+
+Consequences
+- Good: `UnitKind` aside, no drink, ingredient or unit name appears in C# or TypeScript. Adding "Tea" or "Grams" is rows, not a release.
+- Good: the unique index on `(UserId, BeverageTypeId)` is meaningful, because a beverage type is one row rather than a spelling.
+- Bad: the seed is the only way to change the catalogue today, so a new beverage type needs a migration until the moderator slice lands.
+- Bad: `Docs/domain/user-permissions.md` describes moderator management that has no endpoints yet, so the doc runs ahead of the code.
+- Follow-up: the moderator CRUD slice. It writes the same tables and must respect the restrict-on-delete rules the configurations set.
+
+---
+
+## D-0014 - Ingredients are a self-referencing simple/complex hierarchy; only a leaf is choosable
+
+Status: Accepted
+Date: 2026-09-20
+Deciders: ByronKruger (chose in session, 2026-09-20)
+
+Context
+- `Docs/domain/beverage-preference.md` says an ingredient is either simple (a description only) or complex (a description plus a related set), and its worked example - "2 teaspoons of honey which is a complex ingredient of type sugar" - is a preference line pointing at a child of a category.
+- A flat ingredient list would have been smaller, but it cannot express that example, and retrofitting the hierarchy later would reshape the foreign key every saved preference line hangs off.
+
+Decision
+- In the context of modelling what goes in a drink, facing a domain doc whose primary example is a category and its variants, we chose a self-referencing `Ingredient` where composition names the top-level ingredient and a preference line must name a leaf, to achieve the doc's own example working end to end, accepting that choosing a category is now an error the service has to explain rather than something the model prevents.
+
+Options considered
+- Self-referencing hierarchy, leaf-only on a preference (chosen).
+- Flat ingredients: less schema and no `ingredient_requires_variant` error, but "soy milk" and "raw milk" become unrelated ingredients and "milk" means nothing.
+- A separate `IngredientVariant` entity: same shape with an extra table, and no way to express a category that is itself a variant.
+
+Consequences
+- Good: `preference.ingredient_requires_variant` names the category and lists its variants, so a client can recover without a second call.
+- Good: a beverage type composes "Milk" once, and adding a fourth milk is one row that every coffee drinker can immediately pick.
+- Bad: the repository must load two levels and the service must flatten them, which is the bulk of `BeveragePreferenceService`.
+- Bad: only one level is loaded and offered. A grandchild variant would silently not be choosable rather than fail loudly.
+- Follow-up: if a three-level ingredient is ever seeded, the include in `BeverageTypeRepository` and `Choosable` in the service both have to become recursive. Nothing warns you today.
+
+---
+
+## D-0015 - The unit is fixed by the ingredient; an amount is one nullable decimal
+
+Status: Accepted
+Date: 2026-09-20
+Deciders: ByronKruger (chose in session, 2026-09-20)
+
+Context
+- The brief asked to "allow specifying the units". `Docs/domain/beverage-preference.md` says the opposite about ownership: "each ingredient must also have an associated unit type". If a person picked the unit per line, nothing would stop "milk: 3 shots of percentage", and the service would have no rule to validate an amount against.
+- Units also do not all behave alike. Teaspoons and percentage are quantities; `yes / no` is presence - ice is in the whiskey or it is not.
+
+Decision
+- In the context of recording how much of an ingredient somebody wants, facing a brief that reads as letting them pick the unit, we chose to fix the unit on the ingredient and store the amount as a single nullable `decimal(9,3)` interpreted through that unit's `Kind` and range, to achieve an amount that means one thing for a given ingredient and is always validatable, accepting that a caller never chooses a unit and that a `Boolean` unit overloads the number 1 to mean "yes".
+
+Options considered
+- Unit fixed by the ingredient (chosen): the domain doc read literally.
+- Ingredient declares a set of allowed units, caller picks one: honours "specifying the units" most directly and would let sugar be teaspoons or grams, but needs a join table and a per-line unit column, and no seeded ingredient needs it yet.
+- Caller picks any unit from the catalogue: maximum freedom, no validatable rule, and nonsense combinations become representable.
+
+Consequences
+- Good: `UnitKind` plus `MinValue` / `MaxValue` make range checking data-driven - `preference.amount_out_of_range` phrases itself from the unit row, naming no unit in code.
+- Good: null is one concept across every unit - 0 teaspoons, `No` and 0% are the same statement, exactly as the domain doc says.
+- Bad: `Boolean` units store 1 for yes, so the column carries a flag dressed as a quantity. The web client maps a switch to it in one place, and the service rejects any other value.
+- Bad: the API omits nulls from responses (`WhenWritingNull`), so an absent amount reaches a client as `undefined`. The web contract types it `amount?: number | null` and normalises; a client that forgets will read "no ice" as "yes".
+- Follow-up: if an ingredient ever needs two units, this becomes the allowed-set option above - a new entry superseding this one, plus a unit column on `BeveragePreferenceIngredients`.

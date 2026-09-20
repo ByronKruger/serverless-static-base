@@ -1,0 +1,59 @@
+<app-page-header
+  heading="My preferences"
+  description="How you like each drink. One preference per beverage type."
+>
+  <a slot="actions" nz-button nzType="primary" routerLink="new">
+    <nz-icon nzType="plus" />
+    New preference
+  </a>
+</app-page-header>
+
+@if (error(); as apiError) {
+  <nz-alert
+    class="mb-4 block"
+    nzType="error"
+    [nzMessage]="apiError.title"
+    [nzDescription]="apiError.detail ?? ''"
+    nzShowIcon
+  />
+}
+
+@if (loading()) {
+  <nz-skeleton [nzActive]="true" [nzParagraph]="{ rows: 4 }" />
+} @else if (hasPreferences()) {
+  <!-- Container queries, not viewport media: these cards are reusable, and the shell
+       already owns the viewport breakpoints (Docs/ARCHITECTURE.md). -->
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+    @for (preference of preferences(); track preference.id) {
+      <nz-card [nzTitle]="preference.beverageName">
+        @if (preference.lines.length === 0) {
+          <p class="m-0 text-sm opacity-70">Nothing specified - just the drink itself.</p>
+        } @else {
+          <dl class="m-0 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-sm">
+            @for (line of preference.lines; track line.ingredientName) {
+              <dt class="min-w-0 truncate opacity-70">{{ line.ingredientName }}</dt>
+              <dd class="m-0 text-right font-medium">{{ line.amount }}</dd>
+            }
+          </dl>
+        }
+      </nz-card>
+    }
+  </div>
+} @else {
+  <nz-empty
+    nzNotFoundImage="simple"
+    [nzNotFoundContent]="emptyContent"
+    [nzNotFoundFooter]="emptyFooter"
+  />
+
+  <ng-template #emptyContent>
+    <span>You have not saved a preference yet.</span>
+  </ng-template>
+
+  <ng-template #emptyFooter>
+    <a nz-button nzType="primary" routerLink="new">
+      <nz-icon nzType="plus" />
+      Create your first one
+    </a>
+  </ng-template>
+}
