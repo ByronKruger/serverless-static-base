@@ -68,7 +68,15 @@ describe('AuthStore', () => {
     const store = TestBed.inject(AuthStore);
     const http = TestBed.inject(HttpTestingController);
 
-    store.register({ email: 'sam@coffeeg.test', userName: 'sam', password: 'Str0ng!Passw0rd' }).subscribe();
+    store
+      .register({
+        email: 'sam@coffeeg.test',
+        userName: 'sam',
+        firstName: 'Sam',
+        lastName: 'Altman',
+        password: 'Str0ng!Passw0rd',
+      })
+      .subscribe();
     http.expectOne('/api/auth/register').flush(authenticationResponse(inOneHour()));
 
     expect(localStorage.getItem(STORAGE_KEY)).not.toBeNull();

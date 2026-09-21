@@ -118,6 +118,7 @@ public static class ServiceCollectionExtensions
     private static IServiceCollection AddCoffeegApplicationServices(this IServiceCollection services)
     {
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IUserService, UserService>();
         services.AddScoped<IBeverageTypeService, BeverageTypeService>();
         services.AddScoped<IBeveragePreferenceService, BeveragePreferenceService>();
         return services;

@@ -37,7 +37,12 @@ public class BeveragePreferencesControllerTests(CoffeegApiFactory factory) : ICl
 
         var response = await client.PostAsJsonAsync(
             "/api/auth/register",
-            new RegisterRequest($"{discriminator}@coffeeg.test", discriminator, "Str0ng!Passw0rd"));
+            new RegisterRequest(
+                $"{discriminator}@coffeeg.test",
+                discriminator,
+                discriminator,
+                "Drinker",
+                "Str0ng!Passw0rd"));
 
         var session = await response.Content.ReadFromJsonAsync<AuthenticationResponse>();
 

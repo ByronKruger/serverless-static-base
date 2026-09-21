@@ -44,6 +44,8 @@ public sealed class AuthService(
         {
             Email = request.Email,
             UserName = request.UserName,
+            FirstName = request.FirstName,
+            LastName = request.LastName,
             CreatedAtUtc = clock.UtcNow
         };
 

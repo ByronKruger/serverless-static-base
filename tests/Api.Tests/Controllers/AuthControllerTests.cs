@@ -16,7 +16,7 @@ public class AuthControllerTests(CoffeegApiFactory factory) : IClassFixture<Coff
     private readonly HttpClient _client = factory.CreateClient();
 
     private static RegisterRequest Registration(string discriminator) =>
-        new($"{discriminator}@coffeeg.test", discriminator, "Str0ng!Passw0rd");
+        new($"{discriminator}@coffeeg.test", discriminator, "Test", "Person", "Str0ng!Passw0rd");
 
     [Fact]
     public async Task Register_returns_the_new_user_and_a_token()
@@ -30,6 +30,8 @@ public class AuthControllerTests(CoffeegApiFactory factory) : IClassFixture<Coff
         Assert.NotNull(body);
         Assert.Equal("ada@coffeeg.test", body.User.Email);
         Assert.Equal("ada", body.User.UserName);
+        Assert.Equal("Test", body.User.FirstName);
+        Assert.Equal("Person", body.User.LastName);
         Assert.Equal([Roles.User], body.User.Roles);
         Assert.NotEmpty(body.AccessToken);
         Assert.True(body.ExpiresAtUtc > DateTimeOffset.UtcNow);
@@ -66,7 +68,7 @@ public class AuthControllerTests(CoffeegApiFactory factory) : IClassFixture<Coff
 
         var duplicate = await _client.PostAsJsonAsync(
             "/api/auth/register",
-            new RegisterRequest("linus@coffeeg.test", "linus-two", "Str0ng!Passw0rd"));
+            new RegisterRequest("linus@coffeeg.test", "linus-two", "Linus", "Two", "Str0ng!Passw0rd"));
 
         Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
         Assert.Equal("application/problem+json", duplicate.Content.Headers.ContentType?.MediaType);
@@ -85,7 +87,7 @@ public class AuthControllerTests(CoffeegApiFactory factory) : IClassFixture<Coff
 
         var duplicate = await _client.PostAsJsonAsync(
             "/api/auth/register",
-            new RegisterRequest("dennis.other@coffeeg.test", "dennis", "Str0ng!Passw0rd"));
+            new RegisterRequest("dennis.other@coffeeg.test", "dennis", "Dennis", "Other", "Str0ng!Passw0rd"));
 
         Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
     }
@@ -95,7 +97,7 @@ public class AuthControllerTests(CoffeegApiFactory factory) : IClassFixture<Coff
     {
         var response = await _client.PostAsJsonAsync(
             "/api/auth/register",
-            new RegisterRequest("not-an-email", "barbara", "Str0ng!Passw0rd"));
+            new RegisterRequest("not-an-email", "barbara", "Barbara", "Liskov", "Str0ng!Passw0rd"));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
@@ -110,11 +112,30 @@ public class AuthControllerTests(CoffeegApiFactory factory) : IClassFixture<Coff
     }
 
     [Fact]
+    public async Task Register_requires_a_first_name_and_a_surname()
+    {
+        // Required at the edge though nullable on the row (D-0016): the column stays
+        // nullable so the accounts that predate this slice survive, and the validator is
+        // what makes every account created from now on carry both.
+        var response = await _client.PostAsJsonAsync(
+            "/api/auth/register",
+            new RegisterRequest("anonymous@coffeeg.test", "anonymous", "", "", "Str0ng!Passw0rd"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var problem = await response.Content.ReadFromJsonAsync<ValidationProblemDetails>();
+
+        Assert.NotNull(problem);
+        Assert.Contains(nameof(RegisterRequest.FirstName), problem.Errors.Keys);
+        Assert.Contains(nameof(RegisterRequest.LastName), problem.Errors.Keys);
+    }
+
+    [Fact]
     public async Task Register_surfaces_the_identity_password_policy_as_field_errors()
     {
         var response = await _client.PostAsJsonAsync(
             "/api/auth/register",
-            new RegisterRequest("weak@coffeeg.test", "weakling", "weak"));
+            new RegisterRequest("weak@coffeeg.test", "weakling", "Weak", "Ling", "weak"));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 

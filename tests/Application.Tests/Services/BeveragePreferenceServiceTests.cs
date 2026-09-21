@@ -24,7 +24,7 @@ public class BeveragePreferenceServiceTests
     private readonly FakeBeverageTypeRepository _beverageTypes = new();
     private readonly FakeClock _clock = new();
 
-    private BeveragePreferenceService CreateService(string? userId = "7")
+    private BeveragePreferenceService CreateService(int? userKey = Caller)
     {
         IMapper mapper = new MapperConfiguration(
                 configuration =>
@@ -38,7 +38,7 @@ public class BeveragePreferenceServiceTests
         return new BeveragePreferenceService(
             _preferences,
             _beverageTypes,
-            new FakeCurrentUser(userId),
+            new FakeCurrentUser(userKey),
             _clock,
             mapper);
     }
@@ -252,7 +252,7 @@ public class BeveragePreferenceServiceTests
     [Fact]
     public async Task Create_is_unauthorized_when_the_token_carries_no_usable_id()
     {
-        var result = await CreateService(userId: null)
+        var result = await CreateService(userKey: null)
             .CreateAsync(BlackCoffeeWithSoyAndHoney(), CancellationToken.None);
 
         Assert.True(result.IsFailure);

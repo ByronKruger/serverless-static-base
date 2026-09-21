@@ -1,6 +1,10 @@
 namespace Coffeeg.Api.Dtos;
 
-/// <summary>A saved preference, as its owner sees it.</summary>
+/// <summary>
+/// A saved preference. Returned both to its owner and, through
+/// <see cref="UserProfileResponse"/>, to anybody signed in who looks at that person's
+/// profile (D-0017) - so nothing owner-only may be added here.
+/// </summary>
 /// <param name="Id">Surrogate key. Stable, and safe to put in a URL.</param>
 /// <param name="BeverageType">The kind of drink this preference is for.</param>
 /// <param name="CreatedAtUtc">When it was saved. UTC.</param>

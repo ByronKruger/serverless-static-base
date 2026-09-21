@@ -6,8 +6,15 @@ namespace Coffeeg.Api.Interfaces;
 /// </summary>
 public interface ICurrentUser
 {
-    /// <summary>Stable user id from the token, or <c>null</c> for an anonymous request.</summary>
-    string? UserId { get; }
+    /// <summary>
+    /// The caller's surrogate key, or <c>null</c> when the request is anonymous or the
+    /// token's id claim is not an integer.
+    ///
+    /// Deliberately an <c>int?</c> rather than the raw claim string: the key is what
+    /// every table joins on, so parsing it once in the adapter is what stops each service
+    /// growing its own copy of the parse.
+    /// </summary>
+    int? UserKey { get; }
 
     /// <summary>Whether the request carries an authenticated identity.</summary>
     bool IsAuthenticated { get; }

@@ -23,6 +23,11 @@ When this file becomes hard to scan (roughly 8-15 accepted entries, or one entry
 | D-0013 | Beverage types, ingredients and units are moderator-owned reference data, seeded | Accepted | 2026-09-20 |
 | D-0014 | Ingredients are a self-referencing simple/complex hierarchy; only a leaf is choosable | Accepted | 2026-09-20 |
 | D-0015 | The unit is fixed by the ingredient; an amount is one nullable decimal | Accepted | 2026-09-20 |
+| D-0016 | First name and surname are required for new accounts, and nullable in the database | Accepted | 2026-09-20 |
+| D-0017 | A preference is readable by any signed-in person and writable only by its owner | Accepted | 2026-09-20 |
+| D-0018 | User search is an upper-cased contains match over three columns, unindexed | Proposed | 2026-09-20 |
+| D-0019 | The header search lives in `core/user-search/`, not in a feature | Accepted | 2026-09-20 |
+| D-0020 | Cross-feature overlap is carried by `shared/`; no feature imports another | Accepted | 2026-09-20 |
 
 ## Template (copy for each new entry)
 
@@ -428,3 +433,259 @@ Consequences
 - Bad: `Boolean` units store 1 for yes, so the column carries a flag dressed as a quantity. The web client maps a switch to it in one place, and the service rejects any other value.
 - Bad: the API omits nulls from responses (`WhenWritingNull`), so an absent amount reaches a client as `undefined`. The web contract types it `amount?: number | null` and normalises; a client that forgets will read "no ice" as "yes".
 - Follow-up: if an ingredient ever needs two units, this becomes the allowed-set option above - a new entry superseding this one, plus a unit column on `BeveragePreferenceIngredients`.
+
+---
+
+## D-0016 - First name and surname are required for new accounts, and nullable in the database
+
+Status: Accepted
+Date: 2026-09-20
+Deciders: ByronKruger (chose in session, 2026-09-20)
+
+Context
+- User search has to match a person's real name, not only the handle they picked, so
+  `AppUser` needs a first name and a surname. Three accounts already exist, two of them
+  carrying saved beverage preferences, and a non-nullable column cannot be added to a
+  populated table without inventing values for those rows.
+- "Required" and "not null" are separable: one is a rule about new registrations, the
+  other is a rule about every row that has ever existed.
+
+Decision
+- In the context of collecting names at registration, facing a populated table that
+  cannot take a non-nullable column, we chose to make both names **required by the
+  registration validator** and **nullable in the schema** to achieve a guarantee that
+  every account created from now on carries both, without inventing data for the accounts
+  that predate them, accepting that the database now holds two classes of account and
+  every reader of a name has to handle its absence.
+
+Options considered
+- Required at the edge, nullable in the schema (chosen).
+- Required everywhere, with a backfill: one class of account and a simpler model, but the
+  backfill can only invent placeholder names or delete real accounts with real
+  preferences hanging off them.
+- Optional everywhere: cheapest, but then search by surname silently misses whoever
+  declined, and the feature's usefulness depends on a field nobody has to fill in.
+
+Consequences
+- Good: the migration is two `AddColumn` statements, no data repair, and a reversible
+  `Down` - unlike `WaterIsAnOptionalSplash`, which had to rewrite rows.
+- Good: the accounts that predate this stay searchable by username, which is always
+  present and unique.
+- Bad: `UserSummaryResponse.FirstName` and `.LastName` are nullable in the contract
+  forever, and the web client needs a display-name fallback. That fallback lives in
+  exactly two places - `toPersonSummary` and `toPersonProfile`.
+- Bad: nobody can acquire a name retroactively, because editing your own names after
+  registration is not built. The three existing accounts will read as username-only until
+  it is.
+- Follow-up: a profile-editing slice. It is the only way an existing account ever gets a
+  name, and it is also what makes "required" true of the whole table rather than of new
+  rows only.
+
+---
+
+## D-0017 - A preference is readable by any signed-in person and writable only by its owner
+
+Status: Accepted
+Date: 2026-09-20
+Deciders: ByronKruger (chose in session, 2026-09-20)
+
+Context
+- `Docs/domain/beverage-preference.md` rule 9 said preferences are **private**, and that
+  somebody else's is reported as `preference.not_found` (404) rather than 403 so that ids
+  cannot be probed. A profile page that lists the preferences of a person you searched for
+  contradicts that outright.
+- The privacy rule was doing two jobs at once: deciding **who may read** a preference, and
+  deciding **how a refusal is phrased** so it leaks nothing. Only the first has to change.
+
+Decision
+- In the context of building user profiles, facing a domain rule that made every
+  preference private, we chose to make a preference **readable by any signed-in person and
+  writable only by its owner**, exposed through a route that names the subject
+  (`GET /api/users/{id}`) while the owner-scoped routes keep meaning "mine", to achieve a
+  profile page without loosening anything about how a caller's own preferences are
+  addressed, accepting that a saved preference is no longer private and that there is no
+  opt-out.
+
+Options considered
+- Readable by any signed-in person, through a subject-named route (chosen).
+- Readable by anyone, including anonymous callers: makes profiles public on the internet
+  and usernames plus real names harvestable without an account.
+- Opt-in discoverability, with a flag on `AppUser`: keeps privacy as the default, but adds
+  a settings screen to the slice and leaves search returning almost nothing until people
+  opt in. Rejected in session.
+- Widening `GET /api/beverage-preferences/{id}` to serve anybody's: one fewer route, but
+  it destroys the property that makes the 404 safe, because the id space becomes probeable
+  for existence.
+
+Consequences
+- Good: `IBeveragePreferenceRepository` is untouched. Every method still takes the user id
+  it queries for, so the invariant that a query cannot forget the user holds - the profile
+  passes the subject's id instead of the caller's.
+- Good: `GET /api/beverage-preferences` and `/{id}` still answer
+  `preference.not_found` for a stranger's id, so nothing about the owner-scoped surface
+  changed. There is a test that fails if that ever stops being true.
+- Bad: **the people who saved a preference before this shipped did so under a promise it
+  breaks.** Three preferences in the development database are in exactly that position.
+- Bad: `BeveragePreferenceResponse` now has two audiences, so nothing owner-only may ever
+  be added to it. Its doc comment says so; nothing enforces it.
+- Follow-up: if a profile ever needs to be hideable, that is the opt-in option above, and
+  it supersedes this entry rather than amending it.
+
+---
+
+## D-0018 - User search is an upper-cased contains match over three columns, unindexed
+
+Status: Proposed
+Date: 2026-09-20
+Deciders: proposed by agent, pending human
+
+Context
+- Search has to match a term against the username, the first name or the surname,
+  case-insensitively, from an autocomplete that fires as somebody types.
+- Identity maintains `NormalizedUserName`, an upper-cased copy, and `EmailIndex` exists on
+  `NormalizedEmail` precisely so that matching does not depend on the database's
+  collation. The two new name columns have no such twin.
+- Relying on SQL Server's case-insensitive default collation would work today and break
+  silently on a provider or collation change, which is the class of bug D-0009's
+  `EmailIndex` was added to avoid.
+
+Decision
+- In the context of matching a search term, facing two new columns with no normalized
+  copy, we chose to upper-case the term in the service and compare it against
+  `NormalizedUserName` and `FirstName.ToUpper()` / `LastName.ToUpper()`, as a *contains*
+  match, to achieve behaviour that does not depend on collation, accepting that a function
+  on a column cannot use an index on it, so every search is a table scan.
+
+Options considered
+- `ToUpper()` in the query, no new columns (chosen): provider-independent and correct, and
+  small enough to keep the slice to one migration.
+- Persisted computed `NormalizedFirstName` / `NormalizedLastName` columns plus indexes:
+  mirrors what Identity does for username and email, and is what this becomes if the user
+  table grows. Two more columns and an upkeep point, for a table with a handful of rows.
+- Relying on the database's case-insensitive collation: no `UPPER()` at all and indexable
+  prefix matches, but correctness then lives in the database's configuration rather than
+  in the query.
+- `EF.Functions.Like`: reads better than `Contains`, and **throws on the in-memory
+  provider** the API tests use - so the suite would pass and the endpoint would be broken
+  everywhere it is not tested.
+
+Consequences
+- Good: verified against LocalDB, including an accented surname (`Kowalskí`) matched by an
+  upper-cased term, which is the case a collation assumption gets wrong.
+- Good: ordering is deterministic - a username starting with the term, then the rest,
+  each alphabetical - so the dropdown does not reshuffle between keystrokes.
+- Bad: a scan per keystroke. Mitigated only by the client's 250 ms debounce, its
+  two-character floor and the capped `limit`, all of which are conventions rather than
+  guarantees.
+- Bad: **neither test layer proves the SQL.** The service tests use a fake that restates
+  the predicate, and the API tests run on the in-memory provider, where the same LINQ
+  executes in-process with .NET's ordinal semantics. Only a manual run against a real
+  database exercises the translation.
+- Follow-up: if the user table grows past a few thousand rows, take the computed-column
+  option above. It is a strict replacement and needs no change above the repository.
+
+---
+
+## D-0019 - The header search lives in `core/user-search/`, not in a feature
+
+Status: Accepted
+Date: 2026-09-20
+Deciders: ByronKruger (chose the header placement in session, 2026-09-20)
+
+Context
+- The search box was asked for in the shell header, so it is reachable from every page.
+  The shell lives in `core/layout/`, and `Docs/ARCHITECTURE.md` restricts `core/` to "true
+  singletons used once per app" with `shared/ui` forbidden from importing features - which
+  leaves no sanctioned way for the shell to render a component owned by a feature.
+- The profile page is unambiguously a feature. The search box is not: there is one of it,
+  it is mounted once, and it lives as long as the application does - the same description
+  as `core/auth/`.
+
+Decision
+- In the context of hosting the search box in the shell, facing a `core/` that may not
+  import a feature, we chose to place the search's contracts, models, API service, store
+  and component in `core/user-search/`, mirroring `core/auth/`, and to leave
+  `features/users/` owning only the profile page, to achieve app chrome that lives where
+  app chrome lives with no `core` to `feature` dependency, accepting that `core/` now
+  contains a folder the architecture document's tree did not list, and that two places
+  call the `users` resource.
+
+Options considered
+- `core/user-search/`, mirroring `core/auth/` (chosen).
+- The shell imports a component from `features/users/`: nothing moves, but it inverts the
+  documented dependency direction and would need this entry to say so anyway.
+- A dedicated `/users` search page inside the feature, reached from a nav link: no new
+  convention at all, and rejected in session on the interaction - a search you have to
+  navigate to first is not the same feature.
+
+Consequences
+- Good: `core/layout/shell` imports from `core/`, which it already does, so no rule bends.
+- Good: the store is `providedIn: 'root'` honestly rather than by convenience - there
+  genuinely is one search for the life of the app.
+- Bad: `core/user-search/` is an addition to the `core/` tree in
+  `Docs/ARCHITECTURE.md`, in the same way `Data/`, `Options/` and `Authorization/` were
+  additions in D-0002. The tree is updated to match.
+- Bad: the `users` resource is now called from two places - `core/user-search/` for the
+  search and `features/users/` for the profile - each with its own narrow contracts. That
+  is the cost of the boundary in D-0020.
+- Follow-up: if a second search-like piece of chrome appears, `core/` is the precedent to
+  follow, not a `features/chrome/`.
+
+---
+
+## D-0020 - Cross-feature overlap is carried by `shared/`; no feature imports another
+
+Status: Accepted
+Date: 2026-09-20
+Deciders: ByronKruger (chose in session, 2026-09-20)
+
+Context
+- The profile page renders a saved preference, which `features/preferences/` already knows
+  how to render. The obvious shortcut - have `features/users/` import the preferences
+  feature's models and a component from it - creates a dependency between two sibling
+  features, which nothing in the repository had yet.
+- The overlap turned out to be small and specific: the pure function that phrases an
+  amount with its unit (`"2 tsp"`, `"Yes"`, `"None"`), and the card of term/value rows
+  that was inline markup in one page.
+- A related request in the same session - to reuse the create-preference page as a
+  read-only view - was withdrawn on the principle that a component class serving two
+  purposes is several components wearing one name, which is also what
+  `Docs/ARCHITECTURE.md` locks under "Reusable components".
+
+Decision
+- In the context of two features rendering the same thing, facing a choice between a
+  cross-feature import and moving code, we chose to promote only the **stable, domain-free
+  pieces** to `shared/` - `describeAmount` plus its minimal `AmountUnit` shape in
+  `shared/utils/amount.ts`, and a `title` + `{term, value}` rows card in
+  `shared/ui/detail-card/` - leaving each feature its own transport types and its own
+  mapping, to achieve two features that do not know about each other, accepting that the
+  same endpoint's payload is described by two sets of narrow contracts.
+
+Options considered
+- Promote the shared pieces to `shared/` (chosen).
+- `features/users` imports `features/preferences`: nothing moves and the domain stays with
+  the feature that owns it, but it establishes a cross-feature dependency convention, and
+  the next such pair would have no reason not to point the other way.
+- Duplicate the phrasing rules in each feature: total isolation, and `describeAmount`'s
+  null/yes-no handling then exists twice. That function is exactly where the previous slice
+  shipped a bug, so two copies is the worst option available.
+- Share a component that takes the preferences feature's domain model: no duplication, but
+  `shared/ui` may not import a feature, so the primitive would have to live in a feature
+  anyway.
+
+Consequences
+- Good: `shared/ui/detail-card/` takes strings, so `shared/ui` keeps its
+  no-feature-imports rule literally, and extracting it **removed** an existing
+  duplication - the My-preferences page adopted it too, deleting the `<dl>` that was
+  inline in its template.
+- Good: one definition of how an amount reads, so a profile cannot phrase somebody's drink
+  differently from how its owner sees it.
+- Bad: `features/users/data-access/users.contracts.ts` re-declares the fields it reads
+  from a payload `features/preferences/` also reads. They are narrow views of one endpoint
+  rather than copies of the API's DTO, but they will both need editing if that DTO changes.
+- Bad: `shared/utils/amount.ts` holds a rule that is arguably domain knowledge - that a
+  null amount means "none of this". It is a pure function over a two-field shape, which is
+  what `shared/utils` is for, but the line is not sharp.
+- Follow-up: when a third surface renders a preference, extract nothing new until it is
+  clear what is genuinely stable. Two call sites justified these two pieces; a third may
+  justify a different cut.

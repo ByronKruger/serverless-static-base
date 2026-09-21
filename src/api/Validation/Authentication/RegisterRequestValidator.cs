@@ -25,6 +25,17 @@ public sealed class RegisterRequestValidator : AbstractValidator<RegisterRequest
             .Matches("^[A-Za-z0-9._@+-]+$")
             .WithMessage("A username may only contain letters, digits and . _ @ + -");
 
+        // No character class on either name. UserName's allowed set above is Identity's
+        // constraint restated; a person's name is not Identity's business, and apostrophes,
+        // hyphens, spaces and accents are all ordinary in one.
+        RuleFor(request => request.FirstName)
+            .NotEmpty().WithMessage("A first name is required.")
+            .MaximumLength(64);
+
+        RuleFor(request => request.LastName)
+            .NotEmpty().WithMessage("A surname is required.")
+            .MaximumLength(64);
+
         RuleFor(request => request.Password)
             .NotEmpty().WithMessage("A password is required.")
             .MaximumLength(128);

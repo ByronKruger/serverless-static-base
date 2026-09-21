@@ -1,0 +1,59 @@
+<nz-input-wrapper class="w-full">
+  <nz-icon nzInputPrefix nzType="search" />
+
+  <!--
+    Plain `[value]` and `(input)` rather than ngModel. The trigger directive reads the
+    typed text straight off the input element and its ControlValueAccessor `onChange`
+    defaults to a no-op, so binding a model buys nothing here - and it would actively
+    hurt: on a pick, the trigger writes the chosen option's `nzValue` back through that
+    model, which would fire another search for the id we just navigated to.
+  -->
+  <input
+    nz-input
+    type="search"
+    aria-label="Find someone by name or username"
+    placeholder="Find someone"
+    [value]="term()"
+    (input)="search($any($event.target).value)"
+    [nzAutocomplete]="people"
+  />
+
+  @if (searching()) {
+    <nz-spin nzInputSuffix nzSimple nzSize="small" />
+  }
+</nz-input-wrapper>
+
+<!--
+  `(selectionChange)` is bound on nz-autocomplete, NOT on each nz-auto-option. The option
+  output fires whenever ng-zorro changes an option's selected flag - including the
+  `deselect()` it runs over every option each time the list changes - so a handler there
+  navigates on its own. The component output is emitted behind an `isUserInput` filter,
+  which is the only signal that a person actually picked something.
+-->
+<nz-autocomplete
+  #people
+  [nzDefaultActiveFirstOption]="false"
+  (selectionChange)="open($event)"
+>
+  @for (person of results(); track person.id) {
+    <!-- nzValue is the id, because that is what a pick has to resolve to. nzLabel is
+         therefore required: getLabel() falls back to String(nzValue), which would put a
+         number in the box. -->
+    <nz-auto-option [nzValue]="person.id" [nzLabel]="person.displayName">
+      <span class="font-medium">{{ person.displayName }}</span>
+      @if (!person.nameless) {
+        <span class="ms-2 text-xs opacity-70">&#64;{{ person.userName }}</span>
+      }
+    </nz-auto-option>
+  }
+
+  <!-- Disabled, so selectViaInteraction() ignores them and they can never reach
+       `open`. The sentinel value cannot collide with a real id, which is always > 0. -->
+  @if (empty()) {
+    <nz-auto-option nzDisabled [nzValue]="0" nzLabel="">No matches</nz-auto-option>
+  }
+
+  @if (error(); as apiError) {
+    <nz-auto-option nzDisabled [nzValue]="0" nzLabel="">{{ apiError.title }}</nz-auto-option>
+  }
+</nz-autocomplete>

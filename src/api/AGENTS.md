@@ -73,6 +73,45 @@ Identity lives behind `IUserRepository`, so `AuthService` is unit-testable witho
 Identity, EF, or a database. Do not inject `UserManager` anywhere except
 `Repositories/IdentityUserRepository.cs`.
 
+`ICurrentUser` exposes the caller as **`int? UserKey`**, already parsed. The claim is a
+string; parsing it is `HttpContextCurrentUser`'s job, so a service never does it. A null
+key means anonymous *or* a malformed claim - the two are indistinguishable by design, and
+both were already the same outcome.
+
+## Users, search and profiles
+
+`UsersController` / `IUserService` serve two reads, both open to any signed-in caller with
+no named policy: any signed-in person may read any profile (D-0017), so there is no role
+to check and no ownership rule - which is why this controller takes a user id in the route
+and `BeveragePreferencesController` deliberately does not.
+
+**No response on either route carries an email.** Email is the sign-in credential
+(D-0009), so returning it would let anybody confirm which addresses are registered.
+`UserSummaryResponse` and `UserProfileResponse` have no such property, and
+`UsersControllerTests` asserts it against the raw JSON - a DTO assertion only proves what
+the DTO declares.
+
+`AppUser.FirstName` / `.LastName` are **required at registration and nullable in the
+schema** (D-0016), so every reader must handle their absence. That is not dead
+defensiveness: three accounts predate them and cannot acquire one.
+
+Search (D-0018) upper-cases the term **in the service** and compares it in the repository
+against `NormalizedUserName` and `FirstName.ToUpper()` / `LastName.ToUpper()`. Two things
+to leave alone:
+
+- **Do not reach for `EF.Functions.Like`.** It reads better and it throws on the in-memory
+  provider `CoffeegApiFactory` uses, so the whole suite would pass while the endpoint was
+  broken everywhere it is not tested.
+- **Neither test layer proves the SQL.** The service tests use a fake that restates the
+  predicate; the API tests run the same LINQ in-process. Only a run against a real
+  database exercises the translation, so do that when you touch the predicate.
+
+The profile calls `IBeveragePreferenceRepository.ListForUserAsync` with the **subject's**
+id rather than the caller's. Every method on that port still takes the user it reads for,
+so the invariant that a query cannot forget the user is intact; what changed is who may
+ask. `user.not_found` stays a private member on `UserService` because it has one caller -
+the `BeverageErrors` class exists only because its codes have two each.
+
 ## Beverage preferences
 
 Two resources, four entities, and one rule worth internalising before you touch them.

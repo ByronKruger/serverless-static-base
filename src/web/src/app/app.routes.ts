@@ -20,6 +20,10 @@ export const routes: Routes = [
           import('./features/preferences/preferences.routes').then((m) => m.routes),
       },
       {
+        path: 'users',
+        loadChildren: () => import('./features/users/users.routes').then((m) => m.routes),
+      },
+      {
         path: 'auth',
         loadChildren: () => import('./features/auth/auth.routes').then((m) => m.routes),
       },

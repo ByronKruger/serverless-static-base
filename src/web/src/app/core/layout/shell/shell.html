@@ -48,6 +48,13 @@
       </ul>
 
       @if (isAuthenticated()) {
+        <!-- Core chrome, not a feature (D-0019): one search box for the life of the app,
+             hosted here and nowhere else. It carries the same collapse treatment as the
+             nav above, or it would stay on screen once the nav folds away. -->
+        <div class="hidden w-full max-w-72 min-w-0 md:block" [class.!block]="navOpen()">
+          <app-user-search />
+        </div>
+
         <div class="ms-auto flex shrink-0 items-center gap-2">
           <span class="flex items-center gap-2" data-testid="signed-in-user">
             <nz-icon nzType="user" />
