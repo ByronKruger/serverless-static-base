@@ -1,3 +1,4 @@
+import { describeAmount } from '../../../shared/utils/amount';
 import {
   BeveragePreferenceResponse,
   BeverageTypeDetailResponse,
@@ -11,6 +12,10 @@ import {
  * catalogue (an ingredient, which may have variants), and the form needs slots (a thing
  * to decide about, with one or more options). Doing that once here keeps the branching
  * out of the template.
+ *
+ * `describeAmount` is imported rather than defined here: the users feature phrases
+ * somebody else's amounts the same way, and a second copy of those rules would drift
+ * (D-0020). {@link Unit} structurally satisfies the `AmountUnit` it takes.
  */
 
 export interface Unit {
@@ -81,22 +86,6 @@ export function toPreference(response: BeveragePreferenceResponse): Preference {
       amount: describeAmount(line.amount ?? null, toUnit(line.unit)),
     })),
   };
-}
-
-/**
- * How an amount reads once the unit is applied. A null amount is the domain's "none of
- * this", which is the same statement as 0 teaspoons or `No`.
- */
-export function describeAmount(amount: number | null, unit: Unit): string {
-  if (unit.isYesNo) {
-    return amount === null ? 'No' : 'Yes';
-  }
-
-  if (amount === null) {
-    return 'None';
-  }
-
-  return unit.symbol === null ? `${amount}` : `${amount} ${unit.symbol}`;
 }
 
 function toSlot(ingredient: IngredientResponse): BeverageSlot {

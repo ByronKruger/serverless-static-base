@@ -94,20 +94,16 @@ public sealed class BeveragePreferenceService(
     }
 
     /// <summary>
-    /// The caller, as the int key the preference rows are joined on. The token carries it
-    /// as a string, so a malformed one is an authentication failure rather than a crash.
+    /// The caller, as the int key the preference rows are joined on. Ownership is this
+    /// feature's security boundary, so an unusable id is an authentication failure rather
+    /// than a query that quietly matches nothing.
     /// </summary>
-    private Result<int> CallerId()
-    {
-        if (int.TryParse(currentUser.UserId, NumberStyles.Integer, CultureInfo.InvariantCulture, out var userId))
-        {
-            return userId;
-        }
-
-        return Error.Unauthorized(
-            "auth.unidentified_caller",
-            "The request does not identify a signed-in person.");
-    }
+    private Result<int> CallerId() =>
+        currentUser.UserKey is { } userKey
+            ? userKey
+            : Error.Unauthorized(
+                "auth.unidentified_caller",
+                "The request does not identify a signed-in person.");
 
     /// <summary>
     /// Turns the requested lines into entities, rejecting the first that breaks a rule.

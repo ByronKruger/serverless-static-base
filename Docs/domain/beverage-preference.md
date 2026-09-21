@@ -12,7 +12,7 @@ codeReferences:
   - src/api/Data/Configurations
   - src/web/src/app/features/preferences
 generatedDate: 2026-04-24
-lastVerified: 2026-09-20
+lastVerified: 2026-09-21
 ---
 
 # Overview of Beverage Preferences
@@ -29,6 +29,14 @@ unit type (E.g. percentage, <`yes`|`no`>, teaspoons, shot e.g. whiskey). A user 
 allowed to have one preference with a specific beverage type. If a user does not want a
 specific ingredient in their beverage they specify a null/empty value and that means
 (0 teaspoons, `No`, 0% etc.)
+
+## Who may see a preference
+
+A person owns their preferences and is the only one who may create them. Since D-0017,
+anybody signed in may **read** them, because the point of finding another person is to see
+how they take their drinks - see [user-accounts.md](user-accounts.md) for how people are
+found. There is no way to opt out of that, and the preferences saved before D-0017 shipped
+were saved under the opposite promise.
 
 ## Who owns what
 
@@ -91,8 +99,12 @@ is a catalogue of units available to a moderator, not a list of units in play.
 8. A **null or omitted** amount means the person does not want that ingredient. 0
    teaspoons, `No` and 0% are one statement, and an omitted line says the same as a line
    with a null amount.
-9. Preferences are **private**. Somebody else's is reported as `preference.not_found`
-   (404), never 403, so ids cannot be probed.
+9. A preference is **readable by any signed-in person and writable only by its owner**
+   (`Docs/DECISIONS.md` D-0017). Reading somebody else's happens through their profile -
+   `GET /api/users/{id}`, which names the subject in the route. The owner-scoped routes
+   still mean *mine*: `GET /api/beverage-preferences/{id}` reports a preference belonging
+   to anybody else as `preference.not_found` (404), never 403, so ids cannot be probed
+   there. Anonymous callers get nothing either way.
 
 ## Units
 
@@ -111,6 +123,8 @@ because a new behaviour needs new UI anyway.
 
 ## Not in scope yet
 
+- **Hiding your preferences.** D-0017 made them readable by anybody signed in, with no
+  opt-out. The opt-in `discoverable` flag that entry rejected is what this would become.
 - **Editing and deleting** a preference. This slice is create and read only.
 - **Moderator CRUD** for beverage types, ingredients and unit types (D-0013).
 - **Ingredient hierarchies deeper than one level**. The schema is self-referencing so it

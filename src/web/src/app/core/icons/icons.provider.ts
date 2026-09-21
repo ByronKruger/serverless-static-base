@@ -6,6 +6,7 @@ import {
   MailOutline,
   MenuFoldOutline,
   MenuUnfoldOutline,
+  SearchOutline,
   UserOutline,
 } from '@ant-design/icons-angular/icons';
 
@@ -21,5 +22,7 @@ export const provideAppIcons = () =>
     MailOutline,
     MenuFoldOutline,
     MenuUnfoldOutline,
+    // The header search, which is core chrome rather than a feature (D-0019).
+    SearchOutline,
     UserOutline,
   ]);

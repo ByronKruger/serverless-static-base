@@ -17,6 +17,13 @@ public sealed class AppUserConfiguration : IEntityTypeConfiguration<AppUser>
         builder.Property(user => user.UserName).IsRequired();
         builder.Property(user => user.CreatedAtUtc).IsRequired();
 
+        // Deliberately nullable and deliberately unindexed. Required at registration but
+        // not in the schema, so the accounts that predate them survive (D-0016); and
+        // searched through UPPER(), which no index on the raw column could serve
+        // (D-0018).
+        builder.Property(user => user.FirstName).HasMaxLength(64);
+        builder.Property(user => user.LastName).HasMaxLength(64);
+
         // Identity indexes NormalizedEmail but does not make it unique. Email is this
         // system's natural key for a person, so it must be.
         builder

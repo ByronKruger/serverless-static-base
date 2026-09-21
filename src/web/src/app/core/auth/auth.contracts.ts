@@ -5,6 +5,9 @@
 export interface RegisterRequest {
   readonly email: string;
   readonly userName: string;
+  /** Required at registration, though nullable on the row for older accounts (D-0016). */
+  readonly firstName: string;
+  readonly lastName: string;
   readonly password: string;
 }
 
@@ -21,6 +24,9 @@ export interface AuthenticationResponse {
     readonly id: number;
     readonly email: string;
     readonly userName: string;
+    /** Absent on an account registered before names were collected - the API omits nulls. */
+    readonly firstName?: string;
+    readonly lastName?: string;
     readonly roles: readonly string[];
   };
 }

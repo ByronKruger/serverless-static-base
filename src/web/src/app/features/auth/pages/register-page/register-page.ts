@@ -11,7 +11,8 @@ import { ApiError, fieldErrorsFor, isApiError } from '../../../../core/http/api-
 
 /**
  * Create an account. Email is the unique identity for a person; the username is what
- * the rest of the app shows, and is unique too.
+ * the rest of the app shows, and is unique too. The two names are what makes somebody
+ * findable by a person who knows them rather than their handle (D-0018).
  */
 @Component({
   selector: 'app-register-page',
@@ -33,6 +34,11 @@ export class RegisterPage {
   protected readonly form = inject(FormBuilder).nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     userName: ['', [Validators.required, Validators.minLength(3)]],
+    // Required here and at the API, though the columns stay nullable so the accounts
+    // that predate them survive (D-0016). No pattern: a name may carry apostrophes,
+    // hyphens, spaces and accents, unlike a username.
+    firstName: ['', [Validators.required, Validators.maxLength(64)]],
+    lastName: ['', [Validators.required, Validators.maxLength(64)]],
     password: ['', [Validators.required, Validators.minLength(8)]],
   });
 

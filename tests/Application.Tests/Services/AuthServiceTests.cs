@@ -32,7 +32,9 @@ public class AuthServiceTests
     private static RegisterRequest Registration(
         string email = "sam@coffeeg.test",
         string userName = "sam",
-        string password = "Str0ng!Passw0rd") => new(email, userName, password);
+        string firstName = "Sam",
+        string lastName = "Altman",
+        string password = "Str0ng!Passw0rd") => new(email, userName, firstName, lastName, password);
 
     [Fact]
     public async Task Register_creates_the_account_and_returns_a_token()
@@ -42,6 +44,8 @@ public class AuthServiceTests
         Assert.True(result.IsSuccess);
         Assert.Equal("sam@coffeeg.test", result.Value.User.Email);
         Assert.Equal("sam", result.Value.User.UserName);
+        Assert.Equal("Sam", result.Value.User.FirstName);
+        Assert.Equal("Altman", result.Value.User.LastName);
         Assert.NotEmpty(result.Value.AccessToken);
     }
 

@@ -16,4 +16,19 @@ public class AppUser : IdentityUser<int>
 {
     /// <summary>When the account was registered. Always UTC.</summary>
     public DateTimeOffset CreatedAtUtc { get; set; }
+
+    /// <summary>
+    /// Given name. Searchable alongside the username and
+    /// <see cref="LastName"/> (Docs/DECISIONS.md D-0018).
+    ///
+    /// Nullable in the database but required by
+    /// <see cref="Validation.Authentication.RegisterRequestValidator"/>, so every account
+    /// registered from this slice onwards has one and every account registered before it
+    /// does not (D-0016). Code that reads a name must handle its absence; it is not dead
+    /// defensiveness.
+    /// </summary>
+    public string? FirstName { get; set; }
+
+    /// <summary>Family name. Nullable and searchable on the same terms as <see cref="FirstName"/>.</summary>
+    public string? LastName { get; set; }
 }

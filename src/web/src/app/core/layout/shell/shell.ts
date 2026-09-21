@@ -5,6 +5,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
 import { AuthStore } from '../../auth/auth.store';
+import { UserSearch } from '../../user-search/user-search';
 
 /**
  * The application shell: top navigation, who is signed in, and the content region every
@@ -20,6 +21,7 @@ import { AuthStore } from '../../auth/auth.store';
     NzMenuModule,
     NzIconModule,
     NzButtonModule,
+    UserSearch,
   ],
   templateUrl: './shell.html',
   styleUrl: './shell.css',

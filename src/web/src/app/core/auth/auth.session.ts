@@ -5,6 +5,9 @@ export interface AuthenticatedUser {
   readonly id: number;
   readonly email: string;
   readonly userName: string;
+  /** `null` on an account registered before names were collected (D-0016). */
+  readonly firstName: string | null;
+  readonly lastName: string | null;
   readonly roles: readonly string[];
 }
 
@@ -23,6 +26,10 @@ export function toSession(response: AuthenticationResponse): AuthSession {
       id: response.user.id,
       email: response.user.email,
       userName: response.user.userName,
+      // Normalised, because the API omits nulls: both arrive as `undefined` for an
+      // account that has no names.
+      firstName: response.user.firstName ?? null,
+      lastName: response.user.lastName ?? null,
       roles: [...response.user.roles],
     },
     accessToken: response.accessToken,

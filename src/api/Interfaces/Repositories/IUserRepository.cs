@@ -10,8 +10,32 @@ namespace Coffeeg.Api.Interfaces.Repositories;
 /// </summary>
 public interface IUserRepository
 {
+    /// <summary>Finds a user by their surrogate key. <c>null</c> when no such user exists.</summary>
+    Task<AppUser?> FindByIdAsync(int userId, CancellationToken cancellationToken);
+
     /// <summary>Finds a user by email. Matching is case-insensitive.</summary>
     Task<AppUser?> FindByEmailAsync(string email, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Users whose username, first name or surname contains the term, best match first:
+    /// a username starting with it, then the rest, each alphabetical by username.
+    /// </summary>
+    /// <param name="upperCasedTerm">
+    /// The search term, <b>already upper-cased by the caller</b>. The service owns the
+    /// casing so that only one layer decides what case-insensitive means; this method
+    /// only compares. Passing mixed case here matches nothing.
+    /// </param>
+    /// <param name="limit">Maximum rows to return.</param>
+    /// <param name="excludeUserId">
+    /// A user to leave out - the caller, so a search for other people does not return
+    /// yourself. Pass an id no user has to exclude nobody.
+    /// </param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    Task<IReadOnlyCollection<AppUser>> SearchAsync(
+        string upperCasedTerm,
+        int limit,
+        int excludeUserId,
+        CancellationToken cancellationToken);
 
     /// <summary>Finds a user by username. Matching is case-insensitive.</summary>
     Task<AppUser?> FindByUserNameAsync(string userName, CancellationToken cancellationToken);

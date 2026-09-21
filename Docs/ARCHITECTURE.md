@@ -90,6 +90,7 @@ src/web/src/app/
     http/               # ApiError model, error-mapping and tracing interceptors
     icons/              # the one icon set, registered explicitly
     layout/             # app shell and its routed chrome
+    user-search/        # the header's search box: contracts, api, store, component (D-0019)
   shared/ui/            # presentational primitives and patterns only
   shared/utils/         # pure functions, no feature imports
   features/<name>/      # routes, pages, feature store, data-access

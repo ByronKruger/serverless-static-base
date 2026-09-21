@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using Coffeeg.Api.Interfaces;
 using Coffeeg.Api.Options;
@@ -17,7 +18,14 @@ public sealed class HttpContextCurrentUser(
 
     private ClaimsPrincipal? Principal => httpContextAccessor.HttpContext?.User;
 
-    public string? UserId => Principal?.FindFirstValue(_jwt.UserIdClaimType);
+    public int? UserKey =>
+        int.TryParse(
+            Principal?.FindFirstValue(_jwt.UserIdClaimType),
+            NumberStyles.Integer,
+            CultureInfo.InvariantCulture,
+            out var userKey)
+            ? userKey
+            : null;
 
     public bool IsAuthenticated => Principal?.Identity?.IsAuthenticated ?? false;
 

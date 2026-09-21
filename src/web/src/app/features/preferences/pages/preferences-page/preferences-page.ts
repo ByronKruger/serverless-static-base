@@ -1,12 +1,12 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzButtonModule } from 'ng-zorro-antd/button';
-import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzEmptyModule } from 'ng-zorro-antd/empty';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { ApiError, isApiError } from '../../../../core/http/api-error';
+import { DetailCard, DetailRow } from '../../../../shared/ui/detail-card/detail-card';
 import { PageHeader } from '../../../../shared/ui/page-header/page-header';
 import { PreferencesStore } from '../../preferences.store';
 
@@ -16,7 +16,7 @@ import { PreferencesStore } from '../../preferences.store';
   imports: [
     RouterLink,
     PageHeader,
-    NzCardModule,
+    DetailCard,
     NzButtonModule,
     NzIconModule,
     NzAlertModule,
@@ -28,8 +28,23 @@ import { PreferencesStore } from '../../preferences.store';
 export class PreferencesPage {
   private readonly store = inject(PreferencesStore);
 
-  protected readonly preferences = this.store.mine;
   protected readonly hasPreferences = this.store.hasPreferences;
+
+  /**
+   * The cards, in the shape the primitive takes. A `computed` rather than a method
+   * called from the template, so the mapping runs when the preferences change instead of
+   * on every render pass.
+   */
+  protected readonly cards = computed(() =>
+    this.store.mine().map((preference) => ({
+      id: preference.id,
+      title: preference.beverageName,
+      rows: preference.lines.map<DetailRow>((line) => ({
+        term: line.ingredientName,
+        value: line.amount,
+      })),
+    })),
+  );
 
   protected readonly loading = signal(true);
   protected readonly error = signal<ApiError | null>(null);
