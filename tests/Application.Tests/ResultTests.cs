@@ -1,6 +1,6 @@
-using Coffeeg.Api.Results;
+using Platform.Common.Results;
 
-namespace Coffeeg.Application.Tests;
+namespace Platform.Application.Tests;
 
 /// <summary>
 /// Guards the contract every service method depends on: a success carries a value
@@ -29,19 +29,19 @@ public class ResultTests
     [Fact]
     public void Failure_exposes_its_error()
     {
-        var error = Error.NotFound("preference.not_found", "No preference for that beverage type.");
+        var error = Error.NotFound("order.not_found", "No order with that id.");
 
         Result<string> result = error;
 
         Assert.True(result.IsFailure);
         Assert.Equal(ErrorType.NotFound, result.Error.Type);
-        Assert.Equal("preference.not_found", result.Error.Code);
+        Assert.Equal("order.not_found", result.Error.Code);
     }
 
     [Fact]
     public void Failure_has_no_value()
     {
-        Result<string> result = Error.Conflict("preference.duplicate", "One preference per beverage type.");
+        Result<string> result = Error.Conflict("order.duplicate", "One order per reference.");
 
         Assert.Throws<InvalidOperationException>(() => result.Value);
     }

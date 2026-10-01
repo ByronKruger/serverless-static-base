@@ -1,23 +1,22 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Coffeeg.Api.Dtos;
+using Platform.Common.Contracts;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Coffeeg.Api.Tests.Controllers;
+namespace Platform.Api.Tests.Controllers;
 
 /// <summary>
-/// Searching for people and reading a profile over HTTP, through the real pipeline:
-/// query-string binding, the validation filter, Problem Details, and the default-deny
-/// fallback policy.
+/// Searching for people over HTTP, through the real pipeline: query-string binding, the
+/// validation filter, Problem Details, and the default-deny fallback policy.
 ///
 /// The factory's in-memory database is shared across the class, so every account is named
 /// with a <c>us-</c> prefix and searches use terms specific enough not to collide with the
 /// accounts other test classes register in their own factories.
 /// </summary>
-public class UsersControllerTests(CoffeegApiFactory factory) : IClassFixture<CoffeegApiFactory>
+public class UsersControllerTests(PlatformApiFactory factory) : IClassFixture<PlatformApiFactory>
 {
-    private readonly CoffeegApiFactory _factory = factory;
+    private readonly PlatformApiFactory _factory = factory;
 
     private async Task<(HttpClient Client, int UserId)> SignedInAsync(
         string userName,
@@ -28,7 +27,7 @@ public class UsersControllerTests(CoffeegApiFactory factory) : IClassFixture<Cof
 
         var response = await client.PostAsJsonAsync(
             "/api/auth/register",
-            new RegisterRequest($"{userName}@coffeeg.test", userName, firstName, lastName, "Str0ng!Passw0rd"));
+            new RegisterRequest($"{userName}@platform.test", userName, firstName, lastName, "Str0ng!Passw0rd"));
 
         var session = await response.Content.ReadFromJsonAsync<AuthenticationResponse>();
 
@@ -69,14 +68,6 @@ public class UsersControllerTests(CoffeegApiFactory factory) : IClassFixture<Cof
     public async Task Searching_requires_authentication()
     {
         var response = await _factory.CreateClient().GetAsync("/api/users?q=ada");
-
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Reading_a_profile_requires_authentication()
-    {
-        var response = await _factory.CreateClient().GetAsync("/api/users/1");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -187,112 +178,20 @@ public class UsersControllerTests(CoffeegApiFactory factory) : IClassFixture<Cof
     }
 
     [Fact]
-    public async Task Profile_returns_the_person_and_the_preferences_they_saved()
-    {
-        var (theirClient, theirId) = await SignedInAsync("us-subject", "Subject", "Person");
-
-        var created = await theirClient.PostAsJsonAsync(
-            "/api/beverage-preferences",
-            new CreateBeveragePreferenceRequest(1, [new BeveragePreferenceIngredientRequest(1, 2m)]));
-
-        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
-
-        var (onlookerClient, _) = await SignedInAsync("us-onlooker", "On", "Looker");
-
-        var response = await onlookerClient.GetAsync($"/api/users/{theirId}");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var profile = await response.Content.ReadFromJsonAsync<UserProfileResponse>(ApiJson.Options);
-
-        Assert.NotNull(profile);
-        Assert.Equal("us-subject", profile.UserName);
-        Assert.Equal("Subject", profile.FirstName);
-        Assert.Equal("Person", profile.LastName);
-
-        // D-0017: somebody else's preferences are readable. Before it, this was empty.
-        var preference = Assert.Single(profile.Preferences);
-
-        Assert.Equal("Coffee", preference.BeverageType.Name);
-        Assert.Equal(2m, preference.Ingredients.Single().Amount);
-    }
-
-    [Fact]
-    public async Task Profile_of_somebody_with_nothing_saved_has_an_empty_list()
-    {
-        var (_, theirId) = await SignedInAsync("us-empty", "Empty", "Handed");
-        var (client, _) = await SignedInAsync("us-empty-looker", "Empty", "Looker");
-
-        var response = await client.GetAsync($"/api/users/{theirId}");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var profile = await response.Content.ReadFromJsonAsync<UserProfileResponse>(ApiJson.Options);
-
-        Assert.NotNull(profile);
-        Assert.Empty(profile.Preferences);
-    }
-
-    [Fact]
-    public async Task Profile_of_an_unknown_person_is_not_found()
-    {
-        var (client, _) = await SignedInAsync("us-seeker-g", "Seeker", "Seven");
-
-        var response = await client.GetAsync("/api/users/999999");
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
-
-        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
-
-        Assert.NotNull(problem);
-        Assert.Equal("user.not_found", problem.Extensions["code"]?.ToString());
-    }
-
-    [Fact]
-    public async Task Neither_route_ever_discloses_an_email()
+    public async Task Search_never_discloses_an_email()
     {
         // Asserted on the raw body rather than through a DTO, because a DTO only shows
         // what it declares. Email is the sign-in credential (D-0009): a response carrying
         // one would let anybody confirm which addresses are registered.
         var (client, _) = await SignedInAsync("us-privacy", "Privacy", "Watcher");
-        var (_, theirId) = await SignedInAsync("us-private", "Private", "Person");
+        await SignedInAsync("us-private", "Private", "Person");
 
         var search = await client.GetStringAsync("/api/users?q=us-private");
-        var profile = await client.GetStringAsync($"/api/users/{theirId}");
 
-        Assert.DoesNotContain("@coffeeg.test", search, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("@platform.test", search, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("email", search, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("@coffeeg.test", profile, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("email", profile, StringComparison.OrdinalIgnoreCase);
 
-        // The bodies are not empty, so the assertions above mean something.
+        // The body is not empty, so the assertions above mean something.
         Assert.Contains("us-private", search, StringComparison.Ordinal);
-        Assert.Contains("us-private", profile, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public async Task A_preference_of_somebody_elses_is_still_not_readable_by_its_own_id()
-    {
-        // D-0017 opened the profile route, and must not have leaked into the owner-scoped
-        // ones: /api/beverage-preferences still means "mine".
-        var (theirClient, _) = await SignedInAsync("us-owner", "Own", "Er");
-
-        var created = await theirClient.PostAsJsonAsync(
-            "/api/beverage-preferences",
-            new CreateBeveragePreferenceRequest(2, [new BeveragePreferenceIngredientRequest(10, 2m)]));
-
-        var theirs = await created.Content.ReadFromJsonAsync<BeveragePreferenceResponse>(ApiJson.Options);
-
-        var (onlookerClient, _) = await SignedInAsync("us-prober", "Prob", "Er");
-
-        var probe = await onlookerClient.GetAsync($"/api/beverage-preferences/{theirs!.Id}");
-
-        Assert.Equal(HttpStatusCode.NotFound, probe.StatusCode);
-
-        var problem = await probe.Content.ReadFromJsonAsync<ProblemDetails>();
-
-        Assert.NotNull(problem);
-        Assert.Equal("preference.not_found", problem.Extensions["code"]?.ToString());
     }
 }

@@ -1,14 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
-using Coffeeg.Api.Dtos;
+using Platform.Api.Dtos;
 
-namespace Coffeeg.Api.Tests.Controllers;
+namespace Platform.Api.Tests.Controllers;
 
 /// <summary>
 /// Smoke test for the request pipeline: routing, the anonymous opt-out from the
 /// default-deny fallback policy, and the camelCase JSON contract.
 /// </summary>
-public class HealthControllerTests(CoffeegApiFactory factory) : IClassFixture<CoffeegApiFactory>
+public class HealthControllerTests(PlatformApiFactory factory) : IClassFixture<PlatformApiFactory>
 {
     private readonly HttpClient _client = factory.CreateClient();
 

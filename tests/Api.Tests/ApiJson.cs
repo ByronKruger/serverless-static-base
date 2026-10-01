@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Coffeeg.Api.Tests;
+namespace Platform.Api.Tests;
 
 /// <summary>
 /// How the API actually serializes, for tests that read a response back into a DTO.

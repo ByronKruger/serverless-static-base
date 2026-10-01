@@ -1,13 +1,13 @@
 using AutoMapper;
-using Coffeeg.Api.Authorization;
-using Coffeeg.Api.Dtos;
-using Coffeeg.Api.MapperProfiles;
-using Coffeeg.Api.Results;
-using Coffeeg.Api.Services;
-using Coffeeg.Application.Tests.Fakes;
+using Platform.Common.Authorization;
+using Platform.Common.Contracts;
+using Platform.Common.Mapping;
+using Platform.Common.Results;
+using Platform.Common.Services;
+using Platform.Application.Tests.Fakes;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Coffeeg.Application.Tests.Services;
+namespace Platform.Application.Tests.Services;
 
 /// <summary>
 /// <see cref="AuthService"/> in isolation: fake ports only, no ASP.NET, no DbContext,
@@ -30,7 +30,7 @@ public class AuthServiceTests
     }
 
     private static RegisterRequest Registration(
-        string email = "sam@coffeeg.test",
+        string email = "sam@platform.test",
         string userName = "sam",
         string firstName = "Sam",
         string lastName = "Altman",
@@ -42,7 +42,7 @@ public class AuthServiceTests
         var result = await CreateService().RegisterAsync(Registration(), CancellationToken.None);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal("sam@coffeeg.test", result.Value.User.Email);
+        Assert.Equal("sam@platform.test", result.Value.User.Email);
         Assert.Equal("sam", result.Value.User.UserName);
         Assert.Equal("Sam", result.Value.User.FirstName);
         Assert.Equal("Altman", result.Value.User.LastName);
@@ -64,7 +64,7 @@ public class AuthServiceTests
     {
         await CreateService().RegisterAsync(Registration(), CancellationToken.None);
 
-        var created = await _users.FindByEmailAsync("sam@coffeeg.test", CancellationToken.None);
+        var created = await _users.FindByEmailAsync("sam@platform.test", CancellationToken.None);
 
         Assert.NotNull(created);
         Assert.Equal(_clock.UtcNow, created.CreatedAtUtc);
@@ -73,7 +73,7 @@ public class AuthServiceTests
     [Fact]
     public async Task Register_conflicts_when_the_email_is_taken()
     {
-        _users.Seed("sam@coffeeg.test", "someone-else", "Str0ng!Passw0rd");
+        _users.Seed("sam@platform.test", "someone-else", "Str0ng!Passw0rd");
 
         var result = await CreateService().RegisterAsync(Registration(), CancellationToken.None);
 
@@ -85,7 +85,7 @@ public class AuthServiceTests
     [Fact]
     public async Task Register_conflicts_when_the_username_is_taken()
     {
-        _users.Seed("someone.else@coffeeg.test", "sam", "Str0ng!Passw0rd");
+        _users.Seed("someone.else@platform.test", "sam", "Str0ng!Passw0rd");
 
         var result = await CreateService().RegisterAsync(Registration(), CancellationToken.None);
 
@@ -113,10 +113,10 @@ public class AuthServiceTests
     [Fact]
     public async Task Login_returns_a_token_for_correct_credentials()
     {
-        _users.Seed("sam@coffeeg.test", "sam", "Str0ng!Passw0rd", Roles.User, Roles.Moderator);
+        _users.Seed("sam@platform.test", "sam", "Str0ng!Passw0rd", Roles.User, Roles.Moderator);
 
         var result = await CreateService().LoginAsync(
-            new LoginRequest("sam@coffeeg.test", "Str0ng!Passw0rd"),
+            new LoginRequest("sam@platform.test", "Str0ng!Passw0rd"),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -127,10 +127,10 @@ public class AuthServiceTests
     [Fact]
     public async Task Login_matches_the_email_regardless_of_case()
     {
-        _users.Seed("sam@coffeeg.test", "sam", "Str0ng!Passw0rd", Roles.User);
+        _users.Seed("sam@platform.test", "sam", "Str0ng!Passw0rd", Roles.User);
 
         var result = await CreateService().LoginAsync(
-            new LoginRequest("SAM@Coffeeg.TEST", "Str0ng!Passw0rd"),
+            new LoginRequest("SAM@Platform.TEST", "Str0ng!Passw0rd"),
             CancellationToken.None);
 
         Assert.True(result.IsSuccess);
@@ -139,7 +139,7 @@ public class AuthServiceTests
     [Fact]
     public async Task Login_does_not_accept_the_username_as_the_credential()
     {
-        _users.Seed("sam@coffeeg.test", "sam", "Str0ng!Passw0rd", Roles.User);
+        _users.Seed("sam@platform.test", "sam", "Str0ng!Passw0rd", Roles.User);
 
         var result = await CreateService().LoginAsync(
             new LoginRequest("sam", "Str0ng!Passw0rd"),
@@ -152,10 +152,10 @@ public class AuthServiceTests
     [Fact]
     public async Task Login_rejects_a_wrong_password_as_unauthorized()
     {
-        _users.Seed("sam@coffeeg.test", "sam", "Str0ng!Passw0rd");
+        _users.Seed("sam@platform.test", "sam", "Str0ng!Passw0rd");
 
         var result = await CreateService().LoginAsync(
-            new LoginRequest("sam@coffeeg.test", "not-the-password"),
+            new LoginRequest("sam@platform.test", "not-the-password"),
             CancellationToken.None);
 
         Assert.True(result.IsFailure);
@@ -165,15 +165,15 @@ public class AuthServiceTests
     [Fact]
     public async Task Login_cannot_be_used_to_tell_whether_an_account_exists()
     {
-        _users.Seed("sam@coffeeg.test", "sam", "Str0ng!Passw0rd");
+        _users.Seed("sam@platform.test", "sam", "Str0ng!Passw0rd");
         var service = CreateService();
 
         var wrongPassword = await service.LoginAsync(
-            new LoginRequest("sam@coffeeg.test", "not-the-password"),
+            new LoginRequest("sam@platform.test", "not-the-password"),
             CancellationToken.None);
 
         var unknownUser = await service.LoginAsync(
-            new LoginRequest("nobody@coffeeg.test", "not-the-password"),
+            new LoginRequest("nobody@platform.test", "not-the-password"),
             CancellationToken.None);
 
         Assert.Equal(unknownUser.Error.Code, wrongPassword.Error.Code);
@@ -183,10 +183,10 @@ public class AuthServiceTests
     [Fact]
     public async Task Login_does_not_issue_a_token_when_it_fails()
     {
-        _users.Seed("sam@coffeeg.test", "sam", "Str0ng!Passw0rd");
+        _users.Seed("sam@platform.test", "sam", "Str0ng!Passw0rd");
 
         await CreateService().LoginAsync(
-            new LoginRequest("sam@coffeeg.test", "not-the-password"),
+            new LoginRequest("sam@platform.test", "not-the-password"),
             CancellationToken.None);
 
         Assert.Null(_tokens.IssuedFor);

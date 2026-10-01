@@ -1,5 +1,11 @@
 # Plan: finding other people, and reading their preferences
 
+> **Partly superseded on `extract-api-platform-libraries`.** The search half of this slice
+> survives, in `src/platform/Platform.Common`. The profile half - `GET /api/users/{id}`,
+> `UserProfileResponse`, and everything it says about reading another person's preferences -
+> was removed with the beverage domain when the library was extracted (D-0021). Kept as
+> history; not rewritten.
+
 Status: complete
 Date: 2026-09-20 (executed 2026-09-21)
 Spec: [2026-09-20-user-search-and-profiles.md](../specs/2026-09-20-user-search-and-profiles.md)

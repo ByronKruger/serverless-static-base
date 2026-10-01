@@ -1,22 +1,22 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Coffeeg.Api.Authorization;
-using Coffeeg.Api.Dtos;
+using Platform.Common.Authorization;
+using Platform.Common.Contracts;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Coffeeg.Api.Tests.Controllers;
+namespace Platform.Api.Tests.Controllers;
 
 /// <summary>
 /// Registration and sign-in over HTTP, through the real pipeline: binding, the
 /// validation filter, Problem Details, and the token the bearer handler must accept.
 /// </summary>
-public class AuthControllerTests(CoffeegApiFactory factory) : IClassFixture<CoffeegApiFactory>
+public class AuthControllerTests(PlatformApiFactory factory) : IClassFixture<PlatformApiFactory>
 {
     private readonly HttpClient _client = factory.CreateClient();
 
     private static RegisterRequest Registration(string discriminator) =>
-        new($"{discriminator}@coffeeg.test", discriminator, "Test", "Person", "Str0ng!Passw0rd");
+        new($"{discriminator}@platform.test", discriminator, "Test", "Person", "Str0ng!Passw0rd");
 
     [Fact]
     public async Task Register_returns_the_new_user_and_a_token()
@@ -28,7 +28,7 @@ public class AuthControllerTests(CoffeegApiFactory factory) : IClassFixture<Coff
         var body = await response.Content.ReadFromJsonAsync<AuthenticationResponse>();
 
         Assert.NotNull(body);
-        Assert.Equal("ada@coffeeg.test", body.User.Email);
+        Assert.Equal("ada@platform.test", body.User.Email);
         Assert.Equal("ada", body.User.UserName);
         Assert.Equal("Test", body.User.FirstName);
         Assert.Equal("Person", body.User.LastName);
@@ -44,7 +44,7 @@ public class AuthControllerTests(CoffeegApiFactory factory) : IClassFixture<Coff
 
         var login = await _client.PostAsJsonAsync(
             "/api/auth/login",
-            new LoginRequest("grace@coffeeg.test", "Str0ng!Passw0rd"));
+            new LoginRequest("grace@platform.test", "Str0ng!Passw0rd"));
 
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
 
@@ -68,7 +68,7 @@ public class AuthControllerTests(CoffeegApiFactory factory) : IClassFixture<Coff
 
         var duplicate = await _client.PostAsJsonAsync(
             "/api/auth/register",
-            new RegisterRequest("linus@coffeeg.test", "linus-two", "Linus", "Two", "Str0ng!Passw0rd"));
+            new RegisterRequest("linus@platform.test", "linus-two", "Linus", "Two", "Str0ng!Passw0rd"));
 
         Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
         Assert.Equal("application/problem+json", duplicate.Content.Headers.ContentType?.MediaType);
@@ -87,7 +87,7 @@ public class AuthControllerTests(CoffeegApiFactory factory) : IClassFixture<Coff
 
         var duplicate = await _client.PostAsJsonAsync(
             "/api/auth/register",
-            new RegisterRequest("dennis.other@coffeeg.test", "dennis", "Dennis", "Other", "Str0ng!Passw0rd"));
+            new RegisterRequest("dennis.other@platform.test", "dennis", "Dennis", "Other", "Str0ng!Passw0rd"));
 
         Assert.Equal(HttpStatusCode.Conflict, duplicate.StatusCode);
     }
@@ -119,7 +119,7 @@ public class AuthControllerTests(CoffeegApiFactory factory) : IClassFixture<Coff
         // what makes every account created from now on carry both.
         var response = await _client.PostAsJsonAsync(
             "/api/auth/register",
-            new RegisterRequest("anonymous@coffeeg.test", "anonymous", "", "", "Str0ng!Passw0rd"));
+            new RegisterRequest("anonymous@platform.test", "anonymous", "", "", "Str0ng!Passw0rd"));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
@@ -135,7 +135,7 @@ public class AuthControllerTests(CoffeegApiFactory factory) : IClassFixture<Coff
     {
         var response = await _client.PostAsJsonAsync(
             "/api/auth/register",
-            new RegisterRequest("weak@coffeeg.test", "weakling", "Weak", "Ling", "weak"));
+            new RegisterRequest("weak@platform.test", "weakling", "Weak", "Ling", "weak"));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
@@ -150,7 +150,7 @@ public class AuthControllerTests(CoffeegApiFactory factory) : IClassFixture<Coff
     {
         var response = await _client.PostAsJsonAsync(
             "/api/auth/login",
-            new LoginRequest("nobody-at-all@coffeeg.test", "Str0ng!Passw0rd"));
+            new LoginRequest("nobody-at-all@platform.test", "Str0ng!Passw0rd"));
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
@@ -163,7 +163,7 @@ public class AuthControllerTests(CoffeegApiFactory factory) : IClassFixture<Coff
 
         var byEmail = await _client.PostAsJsonAsync(
             "/api/auth/login",
-            new LoginRequest("alan@coffeeg.test", "Str0ng!Passw0rd"));
+            new LoginRequest("alan@platform.test", "Str0ng!Passw0rd"));
 
         var byUserName = await _client.PostAsJsonAsync(
             "/api/auth/login",
@@ -178,7 +178,7 @@ public class AuthControllerTests(CoffeegApiFactory factory) : IClassFixture<Coff
     {
         var response = await _client.PostAsJsonAsync(
             "/api/auth/login",
-            new LoginRequest("someone@coffeeg.test", ""));
+            new LoginRequest("someone@platform.test", ""));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }

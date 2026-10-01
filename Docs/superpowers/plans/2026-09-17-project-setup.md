@@ -1,5 +1,10 @@
 # Plan: project setup for the Coffeeg API and web application
 
+> **Paths and names in this plan are pre-extraction.** It describes a single `Coffeeg.Api`
+> project, which D-0021 split into `src/platform/Platform.Common` plus a host, and
+> `Coffeeg.*` became `Platform.*`. The decisions it made still hold; the file paths do not.
+> Kept as history; not rewritten.
+
 Status: complete
 Date: 2026-09-17, decisions accepted 2026-09-18
 Scope: architecture, directory structure and project setup for `src/api` and `src/web`.

@@ -1,9 +1,10 @@
-using Coffeeg.Api.Dtos;
-using Coffeeg.Api.Interfaces.Services;
+using Platform.Common.Contracts;
+using Platform.Common.Abstractions;
+using Platform.Common.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Coffeeg.Api.Controllers;
+namespace Platform.Api.Controllers;
 
 /// <summary>
 /// Registration and sign-in. Both endpoints are anonymous by necessity - they are how a

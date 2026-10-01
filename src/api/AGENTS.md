@@ -1,147 +1,107 @@
-# src/api - Coffeeg.Api
+# src/api - Platform.Api
 
-Read the root `AGENTS.md` first. This file only maps the project; the rules live in
-`Docs/ARCHITECTURE.md` and the choices in `Docs/DECISIONS.md`.
+Read the root `AGENTS.md` first, then `src/platform/AGENTS.md` - almost everything this
+project relies on is defined there. The rules live in `Docs/ARCHITECTURE.md` and the choices
+in `Docs/DECISIONS.md`.
 
-ASP.NET Core Web API, .NET 9, nullable enabled, warnings as errors. One project,
-horizontal layers, thin controllers. Not Minimal APIs (D-0001).
+ASP.NET Core Web API, .NET 9, nullable enabled, warnings as errors. Not Minimal APIs
+(D-0001). This project is **a reference host over `Platform.Common`, and the template for a
+product**: it has no domain of its own, and the three controllers it carries exist to show
+what a thin action looks like over a library service.
+
+## Which project does a new file go in?
+
+One question, and it is the whole boundary (D-0021):
+
+> Would this file still make sense in an API that has never heard of this product's domain?
+
+**Yes, and it is machinery** - `src/platform/Platform.Common`. **Yes, but it is this
+product's** - here. A product noun in a type name, a member, or even a comment means it
+belongs here, not there.
 
 ## Where things go
+
+The library owns every folder in the left column of `src/platform/AGENTS.md`. This project
+owns these, and only these:
 
 | Folder | Holds | Never holds |
 | --- | --- | --- |
 | `Controllers/` | Thin actions on `ApiControllerBase`, ~15 lines each | Business logic, `DbContext`, EF entities |
-| `Interfaces/Services/` | `I{Resource}Service` | |
+| `Data/` | `AppDbContext`, `Configurations/`, `Migrations/` | Anything a controller can see |
+| `Dtos/` | This product's `Create{X}Request`, `Update{X}Request`, `{X}Response`, `[FromQuery]` models | One shared DTO per resource |
+| `Entities/` | This product's EF entities | API contracts |
+| `Interfaces/` | This product's ports, in `Repositories/` and `Services/` | |
+| `MapperProfiles/` | This product's AutoMapper profiles | |
+| `Repositories/` | Port implementations over `AppDbContext` | Business rules |
+| `Results/` | This product's error-code classes - only once a code has two callers | `Result`, `Error`, `ErrorType`, which are the library's |
 | `Services/` | `{Resource}Service` - one public method per use case | SQL, `HttpContext` |
-| `Interfaces/Repositories/` | Persistence ports | |
-| `Repositories/` | Port implementations over `CoffeegDbContext` | Business rules |
-| `Data/` | `CoffeegDbContext`, `Configurations/`, `Migrations/` | Anything a controller can see |
-| `Entities/` | EF entities, including the Identity `AppUser` / `AppRole` | API contracts |
-| `Dtos/` | `Create{X}Request`, `Update{X}Request`, `{X}Response`, `[FromQuery]` models | One shared DTO per resource |
-| `Results/` | `Result`, `Result<T>`, `Error`, `ErrorType` | |
-| `Validation/` | One `AbstractValidator<T>` per request type, plus the MVC filter | Validators over EF entities |
-| `MapperProfiles/` | AutoMapper profiles | |
-| `Authorization/` | `Policies`, `Roles` name constants | Ad-hoc role strings anywhere else |
-| `Options/` | Options classes with validation attributes, and their configurators | |
-| `Extensions/` | Registration and pipeline composition, `Result` to `ActionResult` | |
-| `Exceptions/` | Exception types and `GlobalExceptionHandler` | Control flow for expected misses |
-| `Helpers/` | Adapters for platform ports (`SystemClock`, `HttpContextCurrentUser`) | Logic that belongs on a `{Resource}Service` |
+| `Validation/` | One `AbstractValidator<T>` per request type | Validators over EF entities |
+
+Only `Controllers/`, `Data/` and `Dtos/` exist today. The rest appear the first time this
+host grows a domain, and each means here exactly what it means in the library.
 
 ## Composition
 
 `Program.cs` is the only composition root and stays two statements:
-`services.AddCoffeegApi(configuration)` and `app.UseCoffeegApiPipeline()`. Both are in
-`Extensions/`. Add a registration to the right `Add*` method, never to `Program.cs`.
 
-Pipeline order is fixed in `Extensions/WebApplicationExtensions.cs`:
-exception handler, status-code pages, OpenAPI (development only), HTTPS redirection,
-CORS, authentication, authorization, controllers.
+```csharp
+builder.Services.AddPlatformApi<AppDbContext>(builder.Configuration, typeof(Program).Assembly);
+// ...
+app.UsePlatformApiPipeline();
+```
+
+**That second argument is load-bearing.** Validator and AutoMapper discovery scan one
+assembly at a time, so without it the library scans only itself: this host's validators and
+profiles are never registered, every route still answers, and nothing fails at startup to
+say so (D-0022). The same shape of trap applies to entity configurations - see the three
+traps in `src/platform/AGENTS.md`.
+
+A product adds registrations to the library's `Add*` methods only if they are cross-cutting.
+Its own services and repositories go in its own `Add*` extension in this project. Never in
+`Program.cs`.
+
+Pipeline order is fixed in the library's `Extensions/WebApplicationExtensions.cs`:
+exception handler, status-code pages, OpenAPI (development only), HTTPS redirection, CORS,
+authentication, authorization, controllers.
 
 ## Adding an endpoint
 
 Follow the vertical slice recipe in `Docs/ARCHITECTURE.md` - extend the existing
 `{Resource}Controller` / `I{Resource}Service` pair rather than creating a class per verb.
-Every endpoint needs a service unit test in `tests/Application.Tests/Services/` and an
-HTTP test in `tests/Api.Tests/Controllers/`.
+Every endpoint needs a service unit test in `tests/Application.Tests/Services/` and an HTTP
+test in `tests/Api.Tests/Controllers/`.
 
-Defaults you inherit for free, and should not re-implement:
+Everything in "Defaults a consuming host inherits" in `src/platform/AGENTS.md` applies and
+should not be re-implemented - the default-deny fallback policy, the problem-details error
+model, the validation filter, the JSON contract.
 
-- Authorization is default-deny. An endpoint is authenticated unless it carries
-  `[AllowAnonymous]`; use `[Authorize(Policy = Policies.RequireModerator)]` for more.
-- Error responses carry `application/problem+json`, forced centrally by
-  `ResultExtensions.AsProblemJson`. Never put `[Produces(...)]` on a controller: it is a
-  result filter that overwrites `ContentTypes` on every `ObjectResult` and silently
-  re-stamps error bodies as `application/json`.
-- Errors are RFC 9457 problem details, with `traceId` and a stable `code` extension.
-  Return a `Result` failure; do not throw for an expected miss and do not catch to 200.
-- Requests are validated by `FluentValidationFilter` before the action runs. Register a
-  validator; do not call one by hand.
-- JSON is camelCase, enums are strings, nulls are omitted, timestamps are UTC ISO-8601.
+## The three controllers here
 
-## Users and authentication
+- `AuthController` - register and sign in, both `[AllowAnonymous]` by necessity: they are how
+  a caller obtains the token every other endpoint requires. Both return 200 rather than 201;
+  what comes back is a session, not a representation of a created resource.
+- `HealthController` - anonymous, and deliberately free of business meaning. It exists so
+  hosts, smoke tests and the API suite have a stable endpoint.
+- `UsersController` - the autocomplete search, authenticated by the inherited fallback policy
+  with no named policy: any signed-in person may look for anybody. **No response carries an
+  email**, and `UsersControllerTests` asserts that against the raw JSON, because a DTO
+  assertion only proves what the DTO declares.
 
-ASP.NET Identity backs `AppUser : IdentityUser<int>` and `AppRole : IdentityRole<int>`
-(D-0009). The int `Id` is the primary key; **email is the natural key and the sign-in
-credential**, uniquely indexed; username is separately unique through Identity's own
-index and is only a display name. Sign-in looks a user up by email, never by username.
+All three are ~25 lines of binding over a library service. They are the shape to copy.
 
-The API issues and validates its own tokens with one symmetric key (D-0010), so
-`Authentication:Jwt:SigningKey` is a real secret. The three roles in
-`Authorization/Roles.cs` are seeded by the migration, and registration grants `User`.
+## The database
 
-Identity lives behind `IUserRepository`, so `AuthService` is unit-testable without
-Identity, EF, or a database. Do not inject `UserManager` anywhere except
-`Repositories/IdentityUserRepository.cs`.
+`AppDbContext : PlatformIdentityDbContext` and holds no `DbSet`. The product's tables go
+here: a `DbSet` per aggregate, entities in `Entities/`, mappings in `Data/Configurations/`.
 
-`ICurrentUser` exposes the caller as **`int? UserKey`**, already parsed. The claim is a
-string; parsing it is `HttpContextCurrentUser`'s job, so a service never does it. A null
-key means anonymous *or* a malformed claim - the two are indistinguishable by design, and
-both were already the same outcome.
+`Data/Migrations/` carries one scaffolded `InitialIdentity` creating the `AspNet*` tables and
+seeding the three roles. Its `.editorconfig` marks the scaffolded files as generated; without
+it the repo style rules fail the build on every new migration.
 
-## Users, search and profiles
-
-`UsersController` / `IUserService` serve two reads, both open to any signed-in caller with
-no named policy: any signed-in person may read any profile (D-0017), so there is no role
-to check and no ownership rule - which is why this controller takes a user id in the route
-and `BeveragePreferencesController` deliberately does not.
-
-**No response on either route carries an email.** Email is the sign-in credential
-(D-0009), so returning it would let anybody confirm which addresses are registered.
-`UserSummaryResponse` and `UserProfileResponse` have no such property, and
-`UsersControllerTests` asserts it against the raw JSON - a DTO assertion only proves what
-the DTO declares.
-
-`AppUser.FirstName` / `.LastName` are **required at registration and nullable in the
-schema** (D-0016), so every reader must handle their absence. That is not dead
-defensiveness: three accounts predate them and cannot acquire one.
-
-Search (D-0018) upper-cases the term **in the service** and compares it in the repository
-against `NormalizedUserName` and `FirstName.ToUpper()` / `LastName.ToUpper()`. Two things
-to leave alone:
-
-- **Do not reach for `EF.Functions.Like`.** It reads better and it throws on the in-memory
-  provider `CoffeegApiFactory` uses, so the whole suite would pass while the endpoint was
-  broken everywhere it is not tested.
-- **Neither test layer proves the SQL.** The service tests use a fake that restates the
-  predicate; the API tests run the same LINQ in-process. Only a run against a real
-  database exercises the translation, so do that when you touch the predicate.
-
-The profile calls `IBeveragePreferenceRepository.ListForUserAsync` with the **subject's**
-id rather than the caller's. Every method on that port still takes the user it reads for,
-so the invariant that a query cannot forget the user is intact; what changed is who may
-ask. `user.not_found` stays a private member on `UserService` because it has one caller -
-the `BeverageErrors` class exists only because its codes have two each.
-
-## Beverage preferences
-
-Two resources, four entities, and one rule worth internalising before you touch them.
-
-`BeverageTypes`, `Ingredients` and `UnitTypes` are **moderator-owned reference data**
-seeded by the `BeveragePreferences` migration (D-0013). There is no write endpoint for
-them in this project yet. Nothing in C# names a drink, an ingredient or a unit - the
-feature reads whatever rows exist, which is what "arbitrary beverage type" means here.
-Do not add a `switch` on a beverage or unit name; if you find yourself wanting one, the
-missing thing is a column on `UnitTypes`.
-
-`Ingredient` is self-referencing (D-0014). An ingredient with no `Variants` is *simple*;
-one with them is a *category*. `BeverageTypeIngredients` composes the **category**
-("Coffee is made with Milk"), and a preference line must name a **leaf** ("Soy milk").
-`BeveragePreferenceService.Choosable` is where that flattening happens, and it walks
-exactly one level - a three-level ingredient would be silently unpickable, so if one is
-ever seeded, that method and the include in `BeverageTypeRepository` both go recursive.
-
-The **unit comes from the ingredient**, never from the request (D-0015). An amount is one
-nullable `decimal(9,3)` read through `UnitType.Kind`: `Numeric` bounds it by the unit's
-range, `Boolean` accepts only 1 (yes) or null (no). Null is always legal - it is the
-domain's "none of this".
-
-Error codes live in `Results/BeverageErrors.cs`, not inline: both services return
-`beverage_type.not_found`, and both test suites assert the codes by name.
-
-Ownership is a **service** rule, applied from `ICurrentUser`, not a policy on the action.
-Every `IBeveragePreferenceRepository` method takes the user id so a query that forgets it
-cannot be written, and somebody else's preference is `preference.not_found` (404), never
-403.
+`dotnet ef migrations add` prints `No instantiatable types implementing
+IEntityTypeConfiguration were found while scanning assembly 'Platform.Api'` while this host
+has no tables of its own. That warning is the product's own configuration scan working, not
+a fault.
 
 ## Commands
 
@@ -153,10 +113,18 @@ dotnet ef migrations add <Name> --project src/api --output-dir Data/Migrations
 dotnet ef database update --project src/api
 ```
 
-`Data/Migrations/` carries its own `.editorconfig` marking the scaffolded files as
-generated; without it the repo style rules fail the build on every new migration.
-
 Secrets go in user secrets (`dotnet user-secrets --project src/api set ...`), not in
 `appsettings.Development.json`. `Database:ConnectionString`, `Authentication:Jwt:Issuer`,
-`Authentication:Jwt:Audience` and `Authentication:Jwt:SigningKey` are validated at
-startup: if one is missing, or the key is under 32 characters, the process does not start.
+`Authentication:Jwt:Audience` and `Authentication:Jwt:SigningKey` are validated at startup:
+if one is missing, or the key is under 32 characters, the process does not start.
+
+`UserSecretsId` is `platform-api`, renamed with everything else. **The secrets set under the
+old `coffeeg-api` id are not visible to this project**, so a fresh
+`dotnet user-secrets set "Authentication:Jwt:SigningKey" "<32+ characters>"` is required
+before `dotnet run` will start. `appsettings.Development.json` supplies the issuer, audience
+and a `PlatformAI` connection string, so the signing key is the only one that must come from
+secrets.
+
+Nothing in the build or test path needs it: `dotnet build`, `dotnet test` and
+`dotnet ef migrations add` all work without a secret store, because the test factory supplies
+its own configuration in memory and `migrations add` never connects.

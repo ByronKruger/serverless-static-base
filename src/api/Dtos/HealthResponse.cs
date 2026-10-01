@@ -1,4 +1,4 @@
-namespace Coffeeg.Api.Dtos;
+namespace Platform.Api.Dtos;
 
 /// <summary>Liveness payload returned by <c>GET /api/health</c>.</summary>
 /// <param name="Status">Always <c>"Healthy"</c> when the process can serve requests.</param>

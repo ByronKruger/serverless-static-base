@@ -21,7 +21,7 @@
 
   <ItemGroup Label="Mapping and validation (Docs/ARCHITECTURE.md locks)">
     <!-- 16.x is the patched line for GHSA-rvv3-g6hj-g44x. AutoMapper 15+ is commercially
-         licensed, free below a revenue threshold that Coffeeg sits under - see Docs/DECISIONS.md D-0004. -->
+         licensed, free below a revenue threshold that this project sits under - see Docs/DECISIONS.md D-0004. -->
     <PackageVersion Include="AutoMapper" Version="16.2.0" />
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />

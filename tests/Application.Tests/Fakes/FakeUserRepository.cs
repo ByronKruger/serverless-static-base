@@ -1,8 +1,8 @@
-using Coffeeg.Api.Entities;
-using Coffeeg.Api.Interfaces.Repositories;
-using Coffeeg.Api.Results;
+using Platform.Common.Identity;
+using Platform.Common.Abstractions;
+using Platform.Common.Results;
 
-namespace Coffeeg.Application.Tests.Fakes;
+namespace Platform.Application.Tests.Fakes;
 
 /// <summary>
 /// In-memory <see cref="IUserRepository"/>. Lets the service be tested without Identity,
@@ -49,7 +49,7 @@ public sealed class FakeUserRepository : IUserRepository
     /// looks.
     /// </summary>
     public AppUser SeedPerson(string userName, string? firstName, string? lastName) =>
-        Add($"{userName}@coffeeg.test", userName, firstName, lastName);
+        Add($"{userName}@platform.test", userName, firstName, lastName);
 
     /// <summary>
     /// <c>NormalizedUserName</c> is set here because <see cref="SearchAsync"/> matches on

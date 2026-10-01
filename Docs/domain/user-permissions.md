@@ -13,4 +13,4 @@ lastVerified: 2026-04-28
 
 # Overview of User Permissions
 
-Moderators can manage (add, modify, remove) beverage types and associated ingredients. Administrators can do whatever moderators can in addition to view dashboards of other users and manage roles (e.g. assign/revoke moderator role from users)
+Moderators can manage the product-owned reference data a product defines for them. Administrators can do whatever moderators can in addition to view dashboards of other users and manage roles (e.g. assign/revoke moderator role from users)

@@ -1,6 +1,8 @@
-# Coffeeg Agent Instructions
+# Platform Agent Instructions
 
 This file is the shared source of truth for repo conventions for all agents. Keep it short and use it as a map to the deeper project and domain documentation.
+
+This repository is a **base for new API projects**, not a product. The cross-cutting machinery lives in `src/platform/Platform.Common` and `src/api` is a reference host that demonstrates it (D-0021). Before adding a file, answer one question: would it still make sense in an API that has never heard of this product's domain? Yes, and it is machinery - the library. Yes, but it is this product's - the host. The library names no product noun anywhere, including in its comments.
 
 ## Required Reading
 
@@ -13,8 +15,9 @@ This file is the shared source of truth for repo conventions for all agents. Kee
 | Area | Purpose |
 | `Docs/domain` | System-of-record business and implementation knowledge |
 | `Docs/superpowers` | Current Superpowers specs and implementation plans for agent-driven work |
-| `src/api` | Server-side ASP.NET application  |
-| `src/web` | Front-end Angular based web-application |
+| `src/platform/Platform.Common` | The reusable library: auth, authz, problem details, result pattern, options, pipeline |
+| `src/api` | Reference ASP.NET host over the library, and the template for a product |
+| `src/web` | Front-end Angular based web-application - **still the beverage client; not yet extracted** |
 
 ## Architecture Invariants
 

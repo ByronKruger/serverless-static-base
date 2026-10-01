@@ -1,6 +1,6 @@
-using Coffeeg.Api.Interfaces;
+using Platform.Common.Abstractions;
 
-namespace Coffeeg.Application.Tests.Fakes;
+namespace Platform.Application.Tests.Fakes;
 
 /// <summary>
 /// In-memory <see cref="ICurrentUser"/> so ownership rules can be tested directly.

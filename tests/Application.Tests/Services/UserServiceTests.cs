@@ -1,45 +1,35 @@
 using AutoMapper;
-using Coffeeg.Api.Dtos;
-using Coffeeg.Api.MapperProfiles;
-using Coffeeg.Api.Results;
-using Coffeeg.Api.Services;
-using Coffeeg.Application.Tests.Fakes;
+using Platform.Common.Contracts;
+using Platform.Common.Mapping;
+using Platform.Common.Services;
+using Platform.Application.Tests.Fakes;
 using Microsoft.Extensions.Logging.Abstractions;
-using Ingredients = Coffeeg.Application.Tests.Fakes.BeverageCatalogue.Ingredients;
-using Types = Coffeeg.Application.Tests.Fakes.BeverageCatalogue.Types;
 
-namespace Coffeeg.Application.Tests.Services;
+namespace Platform.Application.Tests.Services;
 
 /// <summary>
 /// <see cref="UserService"/> in isolation: fake ports only, no ASP.NET, no DbContext, no
-/// database. All three mapper profiles are registered, because a profile response nests a
-/// preference, which nests a beverage type and a unit.
+/// database.
 ///
 /// What these tests cannot prove: <see cref="FakeUserRepository.SearchAsync"/> restates
 /// the predicate rather than running it, and the API tests use the in-memory provider, so
-/// nothing here exercises the SQL translation. That is what the LocalDB pass in the plan's
-/// verification is for.
+/// nothing here exercises the SQL translation. Only a run against a real database does
+/// that, so do it when you touch the predicate.
 /// </summary>
 public class UserServiceTests
 {
     private const int Caller = 1;
 
     private readonly FakeUserRepository _users = new();
-    private readonly FakeBeveragePreferenceRepository _preferences = new();
 
     private UserService CreateService(int? callerKey = Caller)
     {
         IMapper mapper = new MapperConfiguration(
-                configuration =>
-                {
-                    configuration.AddProfile<UserProfile>();
-                    configuration.AddProfile<BeverageTypeProfile>();
-                    configuration.AddProfile<BeveragePreferenceProfile>();
-                },
+                configuration => configuration.AddProfile<UserProfile>(),
                 NullLoggerFactory.Instance)
             .CreateMapper();
 
-        return new UserService(_users, _preferences, new FakeCurrentUser(callerKey), mapper);
+        return new UserService(_users, new FakeCurrentUser(callerKey), mapper);
     }
 
     private static UserSearchRequest Search(string term, int? limit = null) =>
@@ -232,75 +222,5 @@ public class UserServiceTests
             nameof(UserResponse.Email),
             typeof(UserSummaryResponse).GetProperties().Select(property => property.Name));
         Assert.Single(matches);
-    }
-
-    [Fact]
-    public async Task Profile_returns_the_person_and_their_preferences()
-    {
-        var them = _users.SeedPerson("ada-l", "Augusta", "Byron");
-        _preferences.Seed(them.Id, Types.Coffee, (Ingredients.Coffee, 2m), (Ingredients.Honey, 1m));
-
-        var result = await CreateService().GetProfileAsync(them.Id, CancellationToken.None);
-
-        Assert.True(result.IsSuccess);
-        Assert.Equal("ada-l", result.Value.UserName);
-        Assert.Equal("Augusta", result.Value.FirstName);
-        Assert.Equal("Byron", result.Value.LastName);
-
-        var preference = Assert.Single(result.Value.Preferences);
-
-        Assert.Equal("Coffee", preference.BeverageType.Name);
-        Assert.Equal(2, preference.Ingredients.Count);
-    }
-
-    [Fact]
-    public async Task Profile_returns_somebody_elses_preferences_rather_than_hiding_them()
-    {
-        // D-0017: readable by any signed-in person. Before it, this was the case that had
-        // to come back empty.
-        var them = _users.SeedPerson("ada-l", "Augusta", "Byron");
-        _preferences.Seed(them.Id, Types.Whiskey, (Ingredients.Whiskey, 2m));
-
-        var result = await CreateService(callerKey: 999).GetProfileAsync(them.Id, CancellationToken.None);
-
-        Assert.True(result.IsSuccess);
-        Assert.Single(result.Value.Preferences);
-    }
-
-    [Fact]
-    public async Task Profile_does_not_leak_a_third_partys_preferences()
-    {
-        var them = _users.SeedPerson("ada-l", "Augusta", "Byron");
-        var somebodyElse = _users.SeedPerson("grace", "Grace", "Hopper");
-
-        _preferences.Seed(them.Id, Types.Coffee, (Ingredients.Coffee, 1m));
-        _preferences.Seed(somebodyElse.Id, Types.Whiskey, (Ingredients.Whiskey, 1m));
-
-        var result = await CreateService().GetProfileAsync(them.Id, CancellationToken.None);
-
-        var preference = Assert.Single(result.Value.Preferences);
-
-        Assert.Equal("Coffee", preference.BeverageType.Name);
-    }
-
-    [Fact]
-    public async Task Profile_of_somebody_with_nothing_saved_has_an_empty_list()
-    {
-        var them = _users.SeedPerson("ada-l", "Augusta", "Byron");
-
-        var result = await CreateService().GetProfileAsync(them.Id, CancellationToken.None);
-
-        Assert.True(result.IsSuccess);
-        Assert.Empty(result.Value.Preferences);
-    }
-
-    [Fact]
-    public async Task Profile_of_an_unknown_person_is_not_found()
-    {
-        var result = await CreateService().GetProfileAsync(404, CancellationToken.None);
-
-        Assert.True(result.IsFailure);
-        Assert.Equal("user.not_found", result.Error.Code);
-        Assert.Equal(ErrorType.NotFound, result.Error.Type);
     }
 }

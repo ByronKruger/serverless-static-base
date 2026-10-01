@@ -1,5 +1,10 @@
 # Plan: first feature slice - registration and authentication
 
+> **Paths and names in this plan are pre-extraction.** Everything it built is now in
+> `src/platform/Platform.Common` rather than `src/api`, and `Coffeeg.*` became `Platform.*`
+> (D-0021). The slice itself is intact and is the heart of what the library provides.
+> Kept as history; not rewritten.
+
 Status: complete
 Date: 2026-09-18
 Scope: registration and password sign-in, end to end. Database renamed to `CoffeegAI`.

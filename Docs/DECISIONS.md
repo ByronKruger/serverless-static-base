@@ -9,7 +9,7 @@ When this file becomes hard to scan (roughly 8-15 accepted entries, or one entry
 | ID | Title | Status | Date |
 | --- | --- | --- | --- |
 | D-0001 | ASP.NET Core Web API host, composed so a serverless host stays reachable | Accepted | 2026-09-17 |
-| D-0002 | One API project with horizontal folders, tests in a sibling `tests/` tree | Accepted | 2026-09-18 |
+| D-0002 | One API project with horizontal folders, tests in a sibling `tests/` tree | Superseded by D-0021 | 2026-09-18 |
 | D-0003 | SQL Server as the EF Core provider | Accepted | 2026-09-18 |
 | D-0004 | AutoMapper 16.x as the mapping library | Accepted | 2026-09-18 |
 | D-0005 | xUnit and NSubstitute as the .NET test stack | Accepted | 2026-09-18 |
@@ -28,6 +28,8 @@ When this file becomes hard to scan (roughly 8-15 accepted entries, or one entry
 | D-0018 | User search is an upper-cased contains match over three columns, unindexed | Proposed | 2026-09-20 |
 | D-0019 | The header search lives in `core/user-search/`, not in a feature | Accepted | 2026-09-20 |
 | D-0020 | Cross-feature overlap is carried by `shared/`; no feature imports another | Accepted | 2026-09-20 |
+| D-0021 | Cross-cutting API code lives in one `Platform.Common` library; the product owns controllers and migrations | Accepted | 2026-10-01 |
+| D-0022 | Registration is generic over the product's `DbContext` and is told the product's assembly | Proposed | 2026-10-01 |
 
 ## Template (copy for each new entry)
 
@@ -82,7 +84,7 @@ Consequences
 
 ## D-0002 - One API project with horizontal folders, tests in a sibling tests tree
 
-Status: Accepted
+Status: Superseded by D-0021
 Date: 2026-09-18
 Deciders: ByronKruger
 
@@ -689,3 +691,140 @@ Consequences
 - Follow-up: when a third surface renders a preference, extract nothing new until it is
   clear what is genuinely stable. Two call sites justified these two pieces; a third may
   justify a different cut.
+
+---
+
+## D-0021 - Cross-cutting API code lives in one Platform.Common library; the product owns controllers and migrations
+
+Status: Accepted
+Date: 2026-10-01
+Deciders: ByronKruger
+Supersedes: D-0002
+
+Context
+- This repository is being turned into the base for future MVPs: a reusable library of the
+  code every API server-side project re-derives - authentication, authorization, the error
+  model, the result pattern - with each product depending on it rather than copying it.
+- D-0002 put all of that in one `Coffeeg.Api` project with horizontal folders, which was
+  right while there was one product. It means product code and reusable machinery share
+  every folder: `Services/` held `AuthService` next to `BeveragePreferenceService`,
+  `Results/` held `Result` next to `BeverageErrors`.
+- D-0002 explicitly rejected "separate Domain / Application / Infrastructure projects". That
+  rejection is about a **vertical** split of one product's layers, each layer a project. The
+  seam here is **horizontal** and different: code that names a product noun on one side,
+  code that names none on the other.
+- The branch doing this extraction (`extract-api-platform-libraries`) is fork-only. It is
+  never merged, so on `master` this entry has no subject and D-0002 still describes the code.
+
+Decision
+- In the context of turning this repository into a base for future MVPs, facing a single
+  project in which product code and reusable machinery share every folder, we chose to split
+  it along one horizontal seam - a `Platform.Common` class library for everything that names
+  no product noun, and a host project holding `Program.cs`, the product `DbContext`, its
+  migrations and its controllers - to achieve a dependency a new product can take instead of
+  re-deriving auth, the error model and the result pattern, accepting that the library
+  carries the full dependency set (ASP.NET Core, EF Core, SQL Server, Identity, AutoMapper,
+  FluentValidation) for every consumer, and that D-0002's single project no longer holds.
+
+The horizontal folders D-0002 protects are **kept**, inside the library: `Results/`,
+`Services/`, `Validation/` and the rest each still mean one thing. Three were renamed where
+the old name only made sense inside a single project - `Interfaces/` became `Abstractions/`,
+`Dtos/` became `Contracts/`, `MapperProfiles/` became `Mapping/` - and `Helpers/`, which was
+a bag, became `Http/`, `Time/` and `Tokens/`.
+
+Options considered
+- One `Platform.Common` library plus a reference host (chosen).
+- Three libraries split by dependency weight (`Core` with no ASP.NET, `AspNetCore`,
+  `Identity`): a worker or console MVP could then take `Result` and the ports without pulling
+  in EF Core and Identity. Rejected as more structure than one person maintaining one base
+  needs today; it stays available, because the folder boundaries inside the single library
+  are exactly where those seams would fall.
+- Keep one project and let each MVP copy it: no dependency to version, but every fix to the
+  error model or token issuance then exists in as many copies as there are products, which is
+  the problem this work exists to end.
+- Ship controllers from the library through an `ApplicationPart`: register and login would
+  work out of the box. Rejected - route templates, `[EndpointName]` values and
+  `[ProducesResponseType]` sets are a product's public HTTP contract, and a library owning
+  them makes that contract a function of a dependency version. Overriding one would mean
+  inheriting from it or shadowing its route, both of which read worse than the eight lines a
+  host writes instead. `ApiControllerBase` is the part worth sharing, and it shares fine as a
+  base class.
+- Ship migrations from the library: rejected. Migrations are a product's schema history. Two
+  consumers have different tables and cannot share a `__EFMigrationsHistory`. The library
+  ships the entity types and their `IEntityTypeConfiguration<T>`s; the product scaffolds the
+  migration.
+
+Consequences
+- Good: a new product writes `Program.cs`, a `DbContext`, and controllers. Registration,
+  sign-in, token issuance and validation, RBAC, problem details, the result pattern, the
+  validation filter and the request pipeline all arrive as a dependency.
+- Good: the seam is testable as a question - "would this file make sense in an API that has
+  never heard of a beverage?" - so where a new file goes is not a judgment call.
+- Bad: the library needs ASP.NET Core and takes EF Core, SQL Server, Identity, AutoMapper and
+  FluentValidation with it. A consumer that wants only `Result` pays for all of it.
+- Bad: a class library does not get the Web SDK's implicit global usings, so
+  `Platform.Common.csproj` restates them as `<Using Include="..."/>` items. Without that
+  block, moved files stop compiling for a reason that has nothing to do with their code.
+- Bad: this entry is scoped to a branch that is never merged. On `master`, D-0002 is still
+  the truth. **If a merge to `master` is ever proposed, re-decide this entry first** -
+  `master` is a product, and for a product D-0002 was the right answer.
+- Follow-up: whether the library is consumed by `ProjectReference` or packed as a NuGet
+  package, and with what versioning policy, is undecided and belongs to the forked
+  repository.
+
+---
+
+## D-0022 - Registration is generic over the product's DbContext and is told the product's assembly
+
+Status: Proposed
+Date: 2026-10-01
+Deciders: ByronKruger
+
+Context
+- `AddCoffeegApi(configuration)` worked because it sat in the same assembly as the product's
+  `DbContext`, its validators and its mapper profiles, and reached all three through
+  `typeof(ServiceCollectionExtensions).Assembly`.
+- Split by D-0021, three same-assembly scans break, and all three break **silently**:
+  `AddValidatorsFromAssembly`, AutoMapper's `AddMaps`, and `ApplyConfigurationsFromAssembly`
+  would each find only the library's own types. The API would start, every route would
+  answer, and requests would simply never be validated.
+- `AddIdentityCore(...).AddEntityFrameworkStores<T>()` and `AddDbContext<T>` both need a
+  concrete context type, which a library cannot name.
+
+Decision
+- In the context of moving the composition root into a library, facing three same-assembly
+  scans that would silently find nothing once split, we chose
+  `AddPlatformApi<TDbContext>(configuration, params Assembly[] featureAssemblies)` with
+  `TDbContext : PlatformIdentityDbContext`, plus a second `ApplyConfigurationsFromAssembly`
+  call inside the library's own context, to achieve a composition root that still reads as
+  two statements in every product, accepting that a host which forgets to pass its assembly
+  gets an API whose requests are never validated and whose failure is invisible at startup.
+
+The assembly list is de-duplicated and always includes the library's own, so passing
+`typeof(Program).Assembly` is additive and passing the library's assembly twice is harmless.
+
+Options considered
+- A generic entry point taking the product's assemblies (chosen).
+- Scan `AppDomain.CurrentDomain.GetAssemblies()`: nothing to pass and nothing to forget, but
+  it registers validators and profiles from every loaded assembly including test and
+  third-party ones, and what is loaded at the moment of the call is not deterministic.
+- Require the product to call `AddValidatorsFromAssembly` and `AddAutoMapper` itself: honest
+  about the dependency, but the composition root stops being two statements and every product
+  re-derives three lines it can get wrong in a way nothing detects.
+- `[assembly: PlatformFeatureAssembly]` discovered by attribute: removes the parameter, adds
+  a marker nobody remembers to apply - the same forgettable step, further from the call site.
+
+Consequences
+- Good: `Program.cs` stays two statements, and the one thing a product must pass sits in the
+  signature where a reader will see it.
+- Good: the `PlatformIdentityDbContext` constraint makes the wrong context type a compile
+  error rather than a startup one.
+- Bad: forgetting `typeof(Program).Assembly` yields an unvalidated API with no symptom at
+  startup. The XML doc on the parameter says so in those words; nothing enforces it.
+- Bad: two `ApplyConfigurationsFromAssembly` calls - the base class's and the product's - is
+  a thing a reader has to be told, because the method's name suggests it is recursive and it
+  is not.
+- Good, and worth knowing: `dotnet ef migrations add` prints `No instantiatable types
+  implementing IEntityTypeConfiguration were found while scanning assembly 'Platform.Api'`
+  for a host that has added no tables yet. That warning is the product's own scan working,
+  not a fault.

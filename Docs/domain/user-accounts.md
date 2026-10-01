@@ -6,16 +6,14 @@ topics:
   - Sign in
   - Sign out
   - Find another person
-  - Read somebody's profile
 codeReferences:
-  - src/api/Services/AuthService.cs
-  - src/api/Services/UserService.cs
-  - src/api/Entities/AppUser.cs
+  - src/platform/Platform.Common/Services/AuthService.cs
+  - src/platform/Platform.Common/Services/UserService.cs
+  - src/platform/Platform.Common/Identity/AppUser.cs
   - src/web/src/app/features/auth
   - src/web/src/app/core/user-search
-  - src/web/src/app/features/users
 generatedDate: 2026-09-18
-lastVerified: 2026-09-21
+lastVerified: 2026-10-01
 ---
 
 # Overview of User Accounts
@@ -45,11 +43,13 @@ and signs in with their **email and password**.
 
 ## Finding other people
 
-Anybody signed in can search for anybody else and open their profile. The search is an
-autocomplete in the application header, and a profile lists that person's saved beverage
-preferences - which is what the search is *for*
-(see [beverage-preference.md](beverage-preference.md) rule 9 and `Docs/DECISIONS.md`
-D-0017).
+Anybody signed in can search for anybody else. The search is an autocomplete, typically in
+the application header, and it answers one question: who else is here?
+
+What a product does with a match is the product's business - open a profile, start a
+conversation, assign a task. The library supplies only the search and the smallest shape
+that identifies a person, which is why a match carries an id, a username and the two names
+and nothing else.
 
 ### What a term matches
 
@@ -71,9 +71,10 @@ An account with no names is still found by its username, which every account has
 
 **Email.** It is the sign-in credential (D-0009), so a search that returned it would let
 anybody confirm which addresses are registered - the same leak that
-`auth.invalid_credentials` exists to prevent. Neither the search results nor a profile
-carries one, and there is a test asserting it on the raw response body rather than through
-a DTO, because a DTO only proves what it declares.
+`auth.invalid_credentials` exists to prevent. Search results carry none, and there is a test
+asserting it on the raw response body rather than through a DTO, because a DTO only proves
+what it declares. A product that adds a read of one person inherits the same rule: a reader
+who is not the account holder never sees the address.
 
 **Roles**, too: what somebody else is allowed to do is not a searcher's business.
 

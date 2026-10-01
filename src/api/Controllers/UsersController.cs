@@ -1,18 +1,21 @@
-using Coffeeg.Api.Dtos;
-using Coffeeg.Api.Interfaces.Services;
+using Platform.Common.Contracts;
+using Platform.Common.Abstractions;
+using Platform.Common.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Coffeeg.Api.Controllers;
+namespace Platform.Api.Controllers;
 
 /// <summary>
-/// Other people: finding them, and reading one.
+/// Finding other people.
 ///
-/// Authenticated by the inherited fallback policy, with no named policy on either action.
-/// Any signed-in person may read any profile (D-0017), so there is no role to check and
-/// no ownership rule to apply - which is exactly why this controller, unlike
-/// <see cref="BeveragePreferencesController"/>, takes a user id in the route.
+/// Authenticated by the inherited fallback policy, with no named policy on the action:
+/// any signed-in person may look for anybody, so there is no role to check and no
+/// ownership rule to apply.
 ///
-/// Neither response carries an email.
+/// No response carries an email. Email is the sign-in credential, so returning it would
+/// let anybody confirm which addresses are registered - and
+/// <c>UsersControllerTests</c> asserts the absence against the raw JSON, because a DTO
+/// assertion only proves what the DTO declares.
 /// </summary>
 public sealed class UsersController(IUserService users) : ApiControllerBase
 {
@@ -25,14 +28,4 @@ public sealed class UsersController(IUserService users) : ApiControllerBase
         [FromQuery] UserSearchRequest request,
         CancellationToken cancellationToken) =>
         Respond(await users.SearchAsync(request, cancellationToken));
-
-    /// <summary>One person, with the preferences they have saved.</summary>
-    [HttpGet("{id:int}")]
-    [EndpointName("GetUserProfile")]
-    [ProducesResponseType(typeof(UserProfileResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<UserProfileResponse>> Get(
-        int id,
-        CancellationToken cancellationToken) =>
-        Respond(await users.GetProfileAsync(id, cancellationToken));
 }

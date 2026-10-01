@@ -1,9 +1,10 @@
-using Coffeeg.Api.Dtos;
-using Coffeeg.Api.Interfaces;
+using Platform.Api.Dtos;
+using Platform.Common.Abstractions;
+using Platform.Common.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Coffeeg.Api.Controllers;
+namespace Platform.Api.Controllers;
 
 /// <summary>
 /// Liveness probe. Deliberately anonymous and deliberately free of any business

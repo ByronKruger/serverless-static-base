@@ -1,6 +1,6 @@
-using Coffeeg.Api.Interfaces;
+using Platform.Common.Abstractions;
 
-namespace Coffeeg.Application.Tests.Fakes;
+namespace Platform.Application.Tests.Fakes;
 
 /// <summary>
 /// Deterministic <see cref="IClock"/> for service tests. Service tests use fake

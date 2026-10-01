@@ -18,7 +18,9 @@
 - AuthZ: policy-based permissions at the endpoint; resource/ownership rules in the application layer. Named policies, not ad-hoc role strings. Every new controller authorized by default.
 - JSON: System.Text.Json, camelCase, UTC timestamps as ISO-8601.
 - DI composition root: Program.cs only.
-- Persistence: behind the repository ports in `Interfaces/Repositories`, implemented in `Repositories/` over the `DbContext` in `Data/` (D-0002). No layer above a repository sees `DbContext`, EF entities, or `IQueryable`. Code-first EF Core; entities never become API contracts.
+- Persistence: behind the repository ports in `Interfaces/Repositories`, implemented in `Repositories/` over the `DbContext` in `Data/` (D-0021). No layer above a repository sees `DbContext`, EF entities, or `IQueryable`. Code-first EF Core; entities never become API contracts.
+- Persistence ownership: the **product** owns its `DbContext` and every migration; the library owns the Identity entity types, their configurations, and the base context those are applied from (D-0021). Two products cannot share a `__EFMigrationsHistory`, so a library that shipped migrations would be unusable by the second one.
+- Composition is generic over the product's context and is told the product's assembly: `AddPlatformApi<TDbContext>(configuration, typeof(Program).Assembly)` (D-0022). Validator, mapper-profile and entity-configuration discovery each scan one assembly, so omitting the product's assembly yields an API whose requests are never validated, with nothing failing at startup to say so.
 - Tests required for every new endpoint: handler unit test + API integration test.
 - Request pipeline (middleware order). Fixed in `Extensions/WebApplicationExtensions.cs` and changed only with a decision entry: exception handler -> status code pages -> OpenAPI (development only, anonymous) -> HTTPS redirection -> CORS -> authentication -> authorization -> controllers. The exception handler is first so nothing downstream can leak an unhandled exception; CORS precedes authentication so a rejected pre-flight still carries its headers.
 - Result pattern and exceptions. Expected failure is data. Unexpected failure is an exception. Do not throw NotFoundException as control flow if the handler already returns Result. Do not catch Exception in handlers and return 200.
@@ -50,34 +52,58 @@
 
 ### ASP.NET server-application
 
-One project, horizontal folders (D-0002). Every folder below has exactly one meaning;
-a file that does not obviously belong to one of them signals a missing decision.
+Two projects, horizontal folders (D-0021, superseding D-0002). Every folder below has
+exactly one meaning; a file that does not obviously belong to one of them signals a missing
+decision.
+
+**Which project a file belongs to is one question**: would it still make sense in an API
+that has never heard of this product's domain? Yes, and it is machinery - the library. Yes,
+but it is this product's - the host. The library names no product noun anywhere, including
+in its comments.
 
 ```
-src/api/
+src/platform/Platform.Common/     # cross-cutting machinery - no product noun anywhere
+  Abstractions/         # ports: IClock, ICurrentUser, IAccessTokenFactory, IUserRepository,
+                        #   IAuthService, IUserService
   Authorization/        # Policies and Roles name constants - no ad-hoc role strings elsewhere
-  Controllers/          # thin actions on ApiControllerBase
-  Data/                 # CoffeegDbContext, Configurations/, Migrations/
-  Dtos/                 # Create/Update requests, responses, [FromQuery] models
-  Entities/             # EF entities - never API contracts
-  Exceptions/           # exception types and the global exception handler
-  Extensions/           # registration, request pipeline, Result -> ActionResult
-  Helpers/              # adapters for platform ports (clock, current user, route casing)
-  Interfaces/           # ports, nested by kind
-    Repositories/
-    Services/
-  MapperProfiles/       # AutoMapper profiles
+  Contracts/            # request/response types the library owns (auth, user summary)
+  Errors/               # GlobalExceptionHandler
+  Extensions/           # registration and request pipeline: AddPlatformApi<TDbContext>,
+                        #   UsePlatformApiPipeline, and the Add* each composes
+  Http/                 # ApiControllerBase, Result -> ActionResult, HttpContext adapters,
+                        #   route casing
+  Identity/             # AppUser, AppRole, their configurations, PlatformIdentityDbContext,
+                        #   and the UserManager adapter behind IUserRepository
+  Mapping/              # AutoMapper profiles
   Options/              # options classes with validation attributes, and their configurators
-  Repositories/         # port implementations over the DbContext
   Results/              # Result, Result<T>, Error, ErrorType
+  Services/             # the library's own services: AuthService, UserService
+  Time/                 # SystemClock
+  Tokens/               # JwtAccessTokenFactory
+  Validation/           # the library's validators, plus the edge filter
+
+src/api/                          # the product: a reference host, and the template for one
+  Controllers/          # thin actions on ApiControllerBase
+  Data/                 # AppDbContext : PlatformIdentityDbContext, Configurations/, Migrations/
+  Dtos/                 # this product's own request/response types
+  Entities/             # this product's EF entities - never API contracts
+  Interfaces/           # this product's ports, nested by kind (Repositories/, Services/)
+  MapperProfiles/       # this product's AutoMapper profiles
+  Repositories/         # port implementations over AppDbContext
+  Results/              # this product's error-code classes
   Services/             # {Resource}Service - one public method per use case
-  Validation/           # one validator per request type, plus the edge filter
-  Program.cs            # the only composition root: AddCoffeegApi + UseCoffeegApiPipeline
+  Validation/           # one validator per request type
+  Program.cs            # the only composition root: AddPlatformApi<AppDbContext> +
+                        #   UsePlatformApiPipeline
 
 tests/
   Application.Tests/    # services in isolation, fake ports only
   Api.Tests/            # WebApplicationFactory, real pipeline, over HTTP
 ```
+
+The host folders above exist as destinations, not as populated directories: this reference
+host has only `Controllers/`, `Data/` and `Dtos/`, because it adds no domain of its own. A
+product fills in the rest, and each name means there exactly what it means in the library.
 
 ### Angular Web-app
 
@@ -108,7 +134,7 @@ across environments.
 
 When adding a capability under horizontal layering: edit the existing resource types across layers. Do not create a Feature/{UseCase}/ folder.
 
-- Identify the resource. Resource = the REST noun (`beverages-types`, `users`). If `OrdersController` / `IOrderService` already exist, extend them. If its the first endpoint for the noun, create the controller + service pair once.
+- Identify the resource. Resource = the REST noun (`order-lines`, `users`). If `OrdersController` / `IOrderService` already exist, extend them. If its the first endpoint for the noun, create the controller + service pair once.
 - HTTP contract (application contracts). Add or extend request/response types in `src/api/Dtos/` and `src/api/Results`. Put contract types that are purely transport attributes into `/Dtos` / `/Results` as well (`[FromQuery]` models that never leave presentation). Prefer contracts so handlers/services stay ASP.NET-free.
 - Validation. Validator besides the request type, or in `src/api/Validation/{Resource}`. One validator per request type. Do not validate on the EF entity.
 - Domain (only if an invariant appears). Domain errors are typed and become `Result` failures.

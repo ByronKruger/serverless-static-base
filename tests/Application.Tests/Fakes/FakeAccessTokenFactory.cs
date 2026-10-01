@@ -1,7 +1,7 @@
-using Coffeeg.Api.Entities;
-using Coffeeg.Api.Interfaces;
+using Platform.Common.Identity;
+using Platform.Common.Abstractions;
 
-namespace Coffeeg.Application.Tests.Fakes;
+namespace Platform.Application.Tests.Fakes;
 
 /// <summary>
 /// Returns a predictable token instead of signing one, so service tests never need a
