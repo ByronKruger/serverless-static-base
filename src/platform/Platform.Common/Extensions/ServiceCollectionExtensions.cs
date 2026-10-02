@@ -37,7 +37,7 @@ public static class ServiceCollectionExtensions
     /// <c>typeof(Program).Assembly</c>. **Passing nothing is a silent failure**: discovery
     /// scans one assembly at a time, so the product's validators would never be registered
     /// and its requests would never be validated, with nothing failing at startup to say
-    /// so (Docs/DECISIONS.md D-0022).
+    /// so (Docs/DECISIONS.md D-0009).
     /// </param>
     public static IServiceCollection AddPlatformApi<TDbContext>(
         this IServiceCollection services,
@@ -158,7 +158,6 @@ public static class ServiceCollectionExtensions
     private static IServiceCollection AddPlatformApplicationServices(this IServiceCollection services)
     {
         services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<IUserService, UserService>();
         return services;
     }
 

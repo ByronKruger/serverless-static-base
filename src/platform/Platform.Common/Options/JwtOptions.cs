@@ -4,7 +4,7 @@ namespace Platform.Common.Options;
 
 /// <summary>
 /// JWT settings. The API both issues and validates its own access tokens
-/// (Docs/DECISIONS.md D-0009), so the signing key is shared between the two and is a
+/// (Docs/DECISIONS.md D-0005), so the signing key is shared between the two and is a
 /// secret: it belongs in user secrets locally and in the host's configuration provider
 /// everywhere else.
 ///

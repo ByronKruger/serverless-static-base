@@ -4,7 +4,7 @@ Read the root `AGENTS.md` first. This file only maps the project; the rules live
 `Docs/ARCHITECTURE.md` and the choices in `Docs/DECISIONS.md`.
 
 A .NET 9 class library, nullable enabled, warnings as errors. It holds the cross-cutting
-machinery of an ASP.NET Core Web API and nothing else (D-0021). `src/api` is a host that
+machinery of an ASP.NET Core Web API and nothing else (D-0008). `src/api` is a host that
 consumes it.
 
 ## The one rule
@@ -21,22 +21,22 @@ taken as a dependency by a product it has never seen.
 
 | Folder | Holds | Never holds |
 | --- | --- | --- |
-| `Abstractions/` | Ports: `IClock`, `ICurrentUser`, `IAccessTokenFactory`, `IUserRepository`, `IAuthService`, `IUserService` | Implementations |
+| `Abstractions/` | Ports: `IClock`, `ICurrentUser`, `IAccessTokenFactory`, `IUserRepository`, `IAuthService` | Implementations |
 | `Authorization/` | `Policies`, `Roles` name constants | Ad-hoc role strings anywhere else |
 | `Contracts/` | The request/response types the library owns | A product's DTOs |
 | `Errors/` | `GlobalExceptionHandler` | Control flow for expected misses |
 | `Extensions/` | `AddPlatformApi<TDbContext>`, `UsePlatformApiPipeline`, and the `Add*` each composes | Anything a product registers |
-| `Http/` | `ApiControllerBase`, `ResultExtensions`, `HttpContextCurrentUser`, `KebabCaseParameterTransformer` | Controllers (D-0021) |
+| `Http/` | `ApiControllerBase`, `ResultExtensions`, `HttpContextCurrentUser`, `KebabCaseParameterTransformer` | Controllers (D-0008) |
 | `Identity/` | `AppUser`, `AppRole`, their configurations, `PlatformIdentityDbContext`, `IdentityUserRepository` | A product's entities, or any migration |
 | `Mapping/` | AutoMapper profiles for the library's own contracts | |
 | `Options/` | Options classes with validation attributes, and their configurators | |
 | `Results/` | `Result`, `Result<T>`, `Error`, `ErrorType` | A product's error-code classes |
-| `Services/` | `AuthService`, `UserService` | A product's services |
+| `Services/` | `AuthService` | A product's services |
 | `Time/` | `SystemClock` | |
 | `Tokens/` | `JwtAccessTokenFactory` | |
 | `Validation/` | The library's validators, plus `FluentValidationFilter` | Validators over EF entities |
 
-Two things the library deliberately does **not** ship, each argued in D-0021:
+Two things the library deliberately does **not** ship, each argued in D-0008:
 
 - **Controllers.** A library can ship them through an `ApplicationPart`, and this one does
   not: route templates, `[EndpointName]` values and `[ProducesResponseType]` sets are a
@@ -48,7 +48,7 @@ Two things the library deliberately does **not** ship, each argued in D-0021:
 
 ## Three traps, all of them silent
 
-These are the whole of D-0022, and every one of them fails without an error at startup.
+These are the whole of D-0009, and every one of them fails without an error at startup.
 
 1. **`ApplyConfigurationsFromAssembly` scans exactly one assembly.** It is not recursive and
    not additive. `PlatformIdentityDbContext.OnModelCreating` calls it for *this* assembly;
@@ -84,11 +84,11 @@ These are the whole of D-0022, and every one of them fails without an error at s
 ## Users and authentication
 
 ASP.NET Identity backs `AppUser : IdentityUser<int>` and `AppRole : IdentityRole<int>`
-(D-0009). The int `Id` is the primary key; **email is the natural key and the sign-in
+(D-0005). The int `Id` is the primary key; **email is the natural key and the sign-in
 credential**, uniquely indexed; username is separately unique through Identity's own index
 and is only a display name. Sign-in looks a user up by email, never by username.
 
-The API issues and validates its own tokens with one symmetric key (D-0010), so
+The API issues and validates its own tokens with one symmetric key (D-0006), so
 `Authentication:Jwt:SigningKey` is a real secret. The three roles in `Authorization/Roles.cs`
 are seeded from `AppRoleConfiguration`, so the names in code and in the database cannot
 drift, and registration grants `User`.
@@ -103,27 +103,10 @@ means anonymous *or* a malformed claim - the two are indistinguishable by design
 were already the same outcome.
 
 `AppUser.FirstName` / `.LastName` are **required at registration and nullable in the schema**
-(D-0016), so every reader must handle their absence.
-
-## User search
-
-`IUserRepository.SearchAsync` is on the library port on purpose: contains-match over
-username, first name and surname, exclude one id, cap the rows - it names nothing
-product-specific, and this port is the only sanctioned way to reach `UserManager`.
-
-Search (D-0018) upper-cases the term **in the service** and compares it in the repository
-against `NormalizedUserName` and `FirstName.ToUpper()` / `LastName.ToUpper()`. Two things to
-leave alone:
-
-- **Do not reach for `EF.Functions.Like`.** It reads better and it throws on the in-memory
-  provider the API tests use, so the whole suite would pass while the endpoint was broken
-  everywhere it is not tested.
-- **Neither test layer proves the SQL.** The service tests use a fake that restates the
-  predicate; the API tests run the same LINQ in-process. Only a run against a real database
-  exercises the translation, so do that when you touch the predicate.
+(D-0007), so every reader must handle their absence.
 
 ## Error codes
 
-`AuthService` keeps its one error as a private member, and `UserService` has none. That is
-the right shape when a code has a single caller. A code with two callers earns a named static
+`AuthService` keeps its one error as a private member. That is the right shape when a code has
+a single caller. A code with two callers earns a named static
 class in the owning project - in a product, that is `src/api/Results/`.

@@ -6,12 +6,12 @@ in `Docs/DECISIONS.md`.
 
 ASP.NET Core Web API, .NET 9, nullable enabled, warnings as errors. Not Minimal APIs
 (D-0001). This project is **a reference host over `Platform.Common`, and the template for a
-product**: it has no domain of its own, and the three controllers it carries exist to show
+product**: it has no domain of its own, and the two controllers it carries exist to show
 what a thin action looks like over a library service.
 
 ## Which project does a new file go in?
 
-One question, and it is the whole boundary (D-0021):
+One question, and it is the whole boundary (D-0008):
 
 > Would this file still make sense in an API that has never heard of this product's domain?
 
@@ -53,7 +53,7 @@ app.UsePlatformApiPipeline();
 **That second argument is load-bearing.** Validator and AutoMapper discovery scan one
 assembly at a time, so without it the library scans only itself: this host's validators and
 profiles are never registered, every route still answers, and nothing fails at startup to
-say so (D-0022). The same shape of trap applies to entity configurations - see the three
+say so (D-0009). The same shape of trap applies to entity configurations - see the three
 traps in `src/platform/AGENTS.md`.
 
 A product adds registrations to the library's `Add*` methods only if they are cross-cutting.
@@ -75,19 +75,15 @@ Everything in "Defaults a consuming host inherits" in `src/platform/AGENTS.md` a
 should not be re-implemented - the default-deny fallback policy, the problem-details error
 model, the validation filter, the JSON contract.
 
-## The three controllers here
+## The two controllers here
 
 - `AuthController` - register and sign in, both `[AllowAnonymous]` by necessity: they are how
   a caller obtains the token every other endpoint requires. Both return 200 rather than 201;
   what comes back is a session, not a representation of a created resource.
 - `HealthController` - anonymous, and deliberately free of business meaning. It exists so
   hosts, smoke tests and the API suite have a stable endpoint.
-- `UsersController` - the autocomplete search, authenticated by the inherited fallback policy
-  with no named policy: any signed-in person may look for anybody. **No response carries an
-  email**, and `UsersControllerTests` asserts that against the raw JSON, because a DTO
-  assertion only proves what the DTO declares.
 
-All three are ~25 lines of binding over a library service. They are the shape to copy.
+Both are ~25 lines of binding over a library service. They are the shape to copy.
 
 ## The database
 

@@ -66,7 +66,7 @@ public sealed class AuthService(
         LoginRequest request,
         CancellationToken cancellationToken)
     {
-        // Email is the sign-in credential (D-0009); the username is a display name.
+        // Email is the sign-in credential (D-0005); the username is a display name.
         var user = await users.FindByEmailAsync(request.Email, cancellationToken);
         if (user is null)
         {

@@ -24,14 +24,13 @@ public sealed class FakeUserRepository : IUserRepository
 
     /// <summary>
     /// Seeds an account with a password and roles, and no names - the shape of an account
-    /// registered before D-0016.
+    /// registered before D-0007.
     /// </summary>
     /// <remarks>
     /// Deliberately <b>not</b> an overload taking the names before <c>params roles</c>.
     /// Given both, C# binds <c>Seed(email, user, pwd, Roles.User, Roles.Moderator)</c> to
     /// the names rather than to the roles, because a non-params match beats a params
     /// expansion - which silently granted no roles at all and failed one auth test.
-    /// Names go through <see cref="SeedPerson"/> instead.
     /// </remarks>
     public AppUser Seed(string email, string userName, string password, params string[] roles)
     {
@@ -43,19 +42,7 @@ public sealed class FakeUserRepository : IUserRepository
         return user;
     }
 
-    /// <summary>
-    /// Seeds a findable person: a username and the two names, which is all a search
-    /// cares about. Either name may be null, which is how an account predating D-0016
-    /// looks.
-    /// </summary>
-    public AppUser SeedPerson(string userName, string? firstName, string? lastName) =>
-        Add($"{userName}@platform.test", userName, firstName, lastName);
-
-    /// <summary>
-    /// <c>NormalizedUserName</c> is set here because <see cref="SearchAsync"/> matches on
-    /// it, exactly as the real query does. Leaving it null would make every username
-    /// search match nothing and every search test pass for the wrong reason.
-    /// </summary>
+    /// <summary>Adds a user with the given identity fields.</summary>
     private AppUser Add(string email, string userName, string? firstName, string? lastName)
     {
         var user = new AppUser
@@ -63,7 +50,6 @@ public sealed class FakeUserRepository : IUserRepository
             Id = _nextId++,
             Email = email,
             UserName = userName,
-            NormalizedUserName = userName.ToUpperInvariant(),
             FirstName = firstName,
             LastName = lastName
         };
@@ -81,32 +67,6 @@ public sealed class FakeUserRepository : IUserRepository
         Task.FromResult(_users.SingleOrDefault(user =>
             string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase)));
 
-    /// <summary>
-    /// Mirrors <c>IdentityUserRepository.SearchAsync</c>: the same three columns, the same
-    /// self-exclusion, the same prefix-first ordering and the same limit. The comparison
-    /// is ordinal because the term arrives already upper-cased, as the port documents.
-    /// </summary>
-    public Task<IReadOnlyCollection<AppUser>> SearchAsync(
-        string upperCasedTerm,
-        int limit,
-        int excludeUserId,
-        CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyCollection<AppUser>>(
-        [
-            .. _users
-                .Where(user =>
-                    user.Id != excludeUserId
-                    && (user.NormalizedUserName!.Contains(upperCasedTerm, StringComparison.Ordinal)
-                        || (user.FirstName is not null
-                            && user.FirstName.ToUpperInvariant().Contains(upperCasedTerm, StringComparison.Ordinal))
-                        || (user.LastName is not null
-                            && user.LastName.ToUpperInvariant().Contains(upperCasedTerm, StringComparison.Ordinal))))
-                .OrderByDescending(user =>
-                    user.NormalizedUserName!.StartsWith(upperCasedTerm, StringComparison.Ordinal))
-                .ThenBy(user => user.UserName, StringComparer.Ordinal)
-                .Take(limit)
-        ]);
-
     public Task<AppUser?> FindByUserNameAsync(string userName, CancellationToken cancellationToken) =>
         Task.FromResult(_users.SingleOrDefault(user =>
             string.Equals(user.UserName, userName, StringComparison.OrdinalIgnoreCase)));
@@ -119,10 +79,6 @@ public sealed class FakeUserRepository : IUserRepository
         }
 
         user.Id = _nextId++;
-
-        // Identity normalizes on write, so the fake does too - otherwise an account
-        // created through the service would be invisible to SearchAsync.
-        user.NormalizedUserName ??= user.UserName?.ToUpperInvariant();
 
         _users.Add(user);
         _passwords[user.Id] = password;

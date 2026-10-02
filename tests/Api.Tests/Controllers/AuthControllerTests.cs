@@ -114,7 +114,7 @@ public class AuthControllerTests(PlatformApiFactory factory) : IClassFixture<Pla
     [Fact]
     public async Task Register_requires_a_first_name_and_a_surname()
     {
-        // Required at the edge though nullable on the row (D-0016): the column stays
+        // Required at the edge though nullable on the row (D-0007): the column stays
         // nullable so the accounts that predate this slice survive, and the validator is
         // what makes every account created from now on carry both.
         var response = await _client.PostAsJsonAsync(

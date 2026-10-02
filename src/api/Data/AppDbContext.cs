@@ -21,7 +21,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : PlatformIden
 
         // This assembly's own configurations. It finds nothing today; it is the line a
         // product edits nothing about, because ApplyConfigurationsFromAssembly scans one
-        // assembly and the base class already scanned the library's (D-0022).
+        // assembly and the base class already scanned the library's (D-0009).
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
 }

@@ -13,7 +13,7 @@
     problem details, the request pipeline - so it references the shared framework rather
     than pulling those parts in as packages. A host that references this project needs
     Microsoft.NET.Sdk.Web; a worker that only wants Result and the ports does not, and
-    that is the one cost of the single-project shape (D-0021).
+    that is the one cost of the single-project shape (D-0008).
   -->
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

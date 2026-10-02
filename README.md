@@ -3,7 +3,7 @@
 A base for new API projects. `src/platform/Platform.Common` is a reusable C# library holding
 the code every ASP.NET Core API re-derives - authentication, authorization, the error model,
 the result pattern, validated options, the request pipeline - and `src/api` is a reference
-host that consumes it and shows what a product writes for itself (D-0021).
+host that consumes it and shows what a product writes for itself (D-0008).
 
 What arrives as a dependency, already wired and tested:
 
@@ -48,7 +48,7 @@ AGENTS.md                      Conventions for agents and humans
 | --- | --- | --- |
 | .NET SDK | 9.0.3xx | `net9.0` is pinned in `Directory.Build.props` |
 | Node.js | 22.22.3+ | Angular 22 refuses to run below this |
-| npm | 11+ | npm 10 cannot resolve this workspace's peer graph (D-0008) |
+| npm | 11+ | npm 10 cannot resolve this workspace's peer graph |
 | SQL Server | LocalDB or any instance | Needed to run the API; not needed to build or test it |
 
 With `nvm` for Windows:
@@ -121,6 +121,7 @@ need a package from it.
 2. Strip `src/web/` to a shell, or delete it.
 3. Add your tables to `AppDbContext`, scaffold a migration, and write your first controller
    following `Docs/ARCHITECTURE.md`'s vertical slice recipe.
-4. Record what you change about the structure in `Docs/DECISIONS.md`. D-0021 and D-0022 are
-   the two entries that describe this split; D-0001 to D-0020 are the history of the project
-   it came from, and several of them are about a beverage domain that is no longer here.
+4. Record what you change about the structure in `Docs/DECISIONS.md`. D-0008 and D-0009 are
+   the two entries that describe this split; D-0001 to D-0007 are the platform decisions
+   (stack, auth, Identity) kept from the project it came from - the beverage-domain and
+   user-search entries were removed when the libraries were extracted.

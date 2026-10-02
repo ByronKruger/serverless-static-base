@@ -25,35 +25,6 @@ public sealed class IdentityUserRepository(UserManager<AppUser> userManager) : I
         return await userManager.FindByEmailAsync(email);
     }
 
-    /// <summary>
-    /// Three columns, one term. <c>NormalizedUserName</c> is Identity's own upper-cased
-    /// copy, so it needs no help; the two name columns have no such twin and are folded
-    /// with <c>ToUpper()</c>, which EF renders as SQL <c>UPPER()</c>.
-    ///
-    /// That makes the predicate unindexable - a function on a column cannot use an index
-    /// on it - which D-0018 accepts at this size. Note the deliberate absence of
-    /// <c>EF.Functions.Like</c>: it would read better and would throw on the in-memory
-    /// provider the API tests run against, so the whole suite would go green locally and
-    /// the endpoint would fail nowhere it is tested.
-    /// </summary>
-    public async Task<IReadOnlyCollection<AppUser>> SearchAsync(
-        string upperCasedTerm,
-        int limit,
-        int excludeUserId,
-        CancellationToken cancellationToken) =>
-        await userManager.Users
-            .AsNoTracking()
-            .Where(user =>
-                user.Id != excludeUserId
-                && (user.NormalizedUserName!.Contains(upperCasedTerm)
-                    || (user.FirstName != null && user.FirstName.ToUpper().Contains(upperCasedTerm))
-                    || (user.LastName != null && user.LastName.ToUpper().Contains(upperCasedTerm))))
-            // Stable, so the dropdown does not reshuffle between keystrokes.
-            .OrderByDescending(user => user.NormalizedUserName!.StartsWith(upperCasedTerm))
-            .ThenBy(user => user.UserName)
-            .Take(limit)
-            .ToListAsync(cancellationToken);
-
     public async Task<AppUser?> FindByUserNameAsync(string userName, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

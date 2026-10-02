@@ -12,7 +12,7 @@
     <!--
       Must stay false: Microsoft.Data.SqlClient resolves collations through culture data
       and throws "en-us is an invalid culture identifier" under invariant mode, so
-      SQL Server (D-0003) and invariant globalization cannot both be had.
+      SQL Server (D-0002) and invariant globalization cannot both be had.
     -->
     <InvariantGlobalization>false</InvariantGlobalization>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>

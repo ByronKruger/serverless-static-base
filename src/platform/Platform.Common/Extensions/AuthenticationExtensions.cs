@@ -10,7 +10,7 @@ namespace Platform.Common.Extensions;
 
 /// <summary>
 /// JWT bearer authentication, validated against the same symmetric key the API signs
-/// with (Docs/DECISIONS.md D-0009). There is no OIDC metadata discovery: this API is
+/// with (Docs/DECISIONS.md D-0005). There is no OIDC metadata discovery: this API is
 /// its own issuer.
 /// </summary>
 public static class AuthenticationExtensions

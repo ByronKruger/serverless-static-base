@@ -18,9 +18,9 @@
 - AuthZ: policy-based permissions at the endpoint; resource/ownership rules in the application layer. Named policies, not ad-hoc role strings. Every new controller authorized by default.
 - JSON: System.Text.Json, camelCase, UTC timestamps as ISO-8601.
 - DI composition root: Program.cs only.
-- Persistence: behind the repository ports in `Interfaces/Repositories`, implemented in `Repositories/` over the `DbContext` in `Data/` (D-0021). No layer above a repository sees `DbContext`, EF entities, or `IQueryable`. Code-first EF Core; entities never become API contracts.
-- Persistence ownership: the **product** owns its `DbContext` and every migration; the library owns the Identity entity types, their configurations, and the base context those are applied from (D-0021). Two products cannot share a `__EFMigrationsHistory`, so a library that shipped migrations would be unusable by the second one.
-- Composition is generic over the product's context and is told the product's assembly: `AddPlatformApi<TDbContext>(configuration, typeof(Program).Assembly)` (D-0022). Validator, mapper-profile and entity-configuration discovery each scan one assembly, so omitting the product's assembly yields an API whose requests are never validated, with nothing failing at startup to say so.
+- Persistence: behind the repository ports in `Interfaces/Repositories`, implemented in `Repositories/` over the `DbContext` in `Data/` (D-0008). No layer above a repository sees `DbContext`, EF entities, or `IQueryable`. Code-first EF Core; entities never become API contracts.
+- Persistence ownership: the **product** owns its `DbContext` and every migration; the library owns the Identity entity types, their configurations, and the base context those are applied from (D-0008). Two products cannot share a `__EFMigrationsHistory`, so a library that shipped migrations would be unusable by the second one.
+- Composition is generic over the product's context and is told the product's assembly: `AddPlatformApi<TDbContext>(configuration, typeof(Program).Assembly)` (D-0009). Validator, mapper-profile and entity-configuration discovery each scan one assembly, so omitting the product's assembly yields an API whose requests are never validated, with nothing failing at startup to say so.
 - Tests required for every new endpoint: handler unit test + API integration test.
 - Request pipeline (middleware order). Fixed in `Extensions/WebApplicationExtensions.cs` and changed only with a decision entry: exception handler -> status code pages -> OpenAPI (development only, anonymous) -> HTTPS redirection -> CORS -> authentication -> authorization -> controllers. The exception handler is first so nothing downstream can leak an unhandled exception; CORS precedes authentication so a rejected pre-flight still carries its headers.
 - Result pattern and exceptions. Expected failure is data. Unexpected failure is an exception. Do not throw NotFoundException as control flow if the handler already returns Result. Do not catch Exception in handlers and return 200.
@@ -52,7 +52,7 @@
 
 ### ASP.NET server-application
 
-Two projects, horizontal folders (D-0021, superseding D-0002). Every folder below has
+Two projects, horizontal folders (D-0008). Every folder below has
 exactly one meaning; a file that does not obviously belong to one of them signals a missing
 decision.
 
@@ -116,7 +116,7 @@ src/web/src/app/
     http/               # ApiError model, error-mapping and tracing interceptors
     icons/              # the one icon set, registered explicitly
     layout/             # app shell and its routed chrome
-    user-search/        # the header's search box: contracts, api, store, component (D-0019)
+    user-search/        # the header's search box: contracts, api, store, component
   shared/ui/            # presentational primitives and patterns only
   shared/utils/         # pure functions, no feature imports
   features/<name>/      # routes, pages, feature store, data-access

@@ -22,7 +22,7 @@ public abstract class PlatformIdentityDbContext(DbContextOptions options)
         // This assembly's configurations: the unique email index, and the three seeded
         // roles. ApplyConfigurationsFromAssembly scans exactly one assembly, so a derived
         // context calling it for its own assembly does not pick these up - which is why
-        // the call is here rather than left to the product (Docs/DECISIONS.md D-0022).
+        // the call is here rather than left to the product (Docs/DECISIONS.md D-0009).
         // Miss it and the roles disappear from the model, which surfaces as registration
         // failing on a role that does not exist.
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(PlatformIdentityDbContext).Assembly);
