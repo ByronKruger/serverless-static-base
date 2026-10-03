@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "HopeTech",
+  "classifications": [ "Web", "WebAPI", "HopeTech.Common" ],
+  "identity": "HopeTech.Common.Templates.Contracts",
+  "groupIdentity": "HopeTech.Common.Templates.Contracts",
+  "name": "HopeTech.Common resource contracts",
+  "description": "The HTTP contracts for one resource and the validator beside them: a create request, a response, and one FluentValidation validator. Together with htc-service and htc-controller this composes to what htc-resource emits in one go.",
+  "shortName": "htc-contracts",
+  "tags": {
+    "language": "C#",
+    "type": "item"
+  },
+  "sourceName": "Widget",
+  "defaultName": "Widget",
+  "preferNameDirectory": false,
+  "symbols": {
+    "rootNamespace": {
+      "type": "bind",
+      "binding": "msbuild:RootNamespace",
+      "replaces": "HopeTech.Api",
+      "defaultValue": "HopeTech.Api",
+      "description": "Read from the host project's RootNamespace. Resolves only in a project that has been restored."
+    },
+    "skipValidator": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "Omit the validator. Only correct when the request carries no rules at all."
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "condition": "(skipValidator)",
+          "exclude": [ "Validation/**" ]
+        }
+      ]
+    }
+  ],
+  "primaryOutputs": [
+    { "path": "Dtos/CreateWidgetRequest.cs" },
+    { "path": "Dtos/WidgetResponse.cs" },
+    { "path": "Validation/Widgets/CreateWidgetRequestValidator.cs" }
+  ]
+}

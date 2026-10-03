@@ -1,0 +1,80 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>HopeTech.Common</RootNamespace>
+    <AssemblyName>HopeTech.Common</AssemblyName>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Missing XML comments are not worth failing a build over. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    A runtime dependency: a consumer takes this by PackageReference (or ProjectReference
+    while developing both). The item templates ship as a separate package that the
+    template engine installs instead - see src/templates (D-0010).
+  -->
+  <PropertyGroup Label="Package">
+    <PackageId>HopeTech.Common</PackageId>
+    <Description>
+      Cross-cutting machinery for an ASP.NET Core Web API: authentication, authorization,
+      RFC 9457 problem details, the result pattern, validated options, and the request
+      pipeline. Names no product noun.
+    </Description>
+    <PackageTags>aspnetcore;api;jwt;identity;problem-details;result-pattern</PackageTags>
+    <IsPackable>true</IsPackable>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="/" Visible="false" />
+  </ItemGroup>
+
+  <!--
+    The library composes ASP.NET Core itself - the controller base class, the MVC filter,
+    problem details, the request pipeline - so it references the shared framework rather
+    than pulling those parts in as packages. A host that references this project needs
+    Microsoft.NET.Sdk.Web; a worker that only wants Result and the ports does not, and
+    that is the one cost of the single-project shape (D-0008).
+  -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!--
+    The implicit global usings Microsoft.NET.Sdk.Web adds and Microsoft.NET.Sdk does not.
+    Restated here so the same file compiles identically in the library and in a host: a
+    class library is the right SDK for this project, but the code it holds is web code.
+  -->
+  <ItemGroup>
+    <Using Include="Microsoft.AspNetCore.Builder" />
+    <Using Include="Microsoft.AspNetCore.Hosting" />
+    <Using Include="Microsoft.AspNetCore.Http" />
+    <Using Include="Microsoft.AspNetCore.Routing" />
+    <Using Include="Microsoft.Extensions.Configuration" />
+    <Using Include="Microsoft.Extensions.DependencyInjection" />
+    <Using Include="Microsoft.Extensions.Hosting" />
+    <Using Include="Microsoft.Extensions.Logging" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
+    <PackageReference Include="AutoMapper" />
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+  </ItemGroup>
+
+  <!--
+    Load-bearing, not convenience: ConfigureCorsPolicy and BearerSecuritySchemeTransformer
+    are internal, and AddValidatorsFromAssembly discovers validators with
+    includeInternalTypes: true.
+  -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="HopeTech.Common.Tests" />
+  </ItemGroup>
+
+</Project>

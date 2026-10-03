@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "HopeTech",
+  "classifications": [ "Web", "WebAPI", "HopeTech.Common", "EntityFrameworkCore" ],
+  "identity": "HopeTech.Common.Templates.Entity",
+  "groupIdentity": "HopeTech.Common.Templates.Entity",
+  "name": "HopeTech.Common entity and repository",
+  "description": "An EF Core entity, its IEntityTypeConfiguration, and the repository port and implementation that keep DbContext out of every layer above. Code-first; the entity is never an API contract.",
+  "shortName": "htc-entity",
+  "tags": {
+    "language": "C#",
+    "type": "item"
+  },
+  "sourceName": "Widget",
+  "defaultName": "Widget",
+  "preferNameDirectory": false,
+  "symbols": {
+    "rootNamespace": {
+      "type": "bind",
+      "binding": "msbuild:RootNamespace",
+      "replaces": "HopeTech.Api",
+      "defaultValue": "HopeTech.Api",
+      "description": "Taken from the host project's RootNamespace."
+    },
+    "dbContext": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "AppDbContext",
+      "defaultValue": "AppDbContext",
+      "description": "The product's DbContext type, the one deriving from HopeTechIdentityDbContext."
+    },
+    "tableParameter": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "",
+      "description": "The table name. Left empty, it is the entity name with an 's' appended - pass it for an irregular plural."
+    },
+    "tableFallback": {
+      "type": "generated",
+      "generator": "join",
+      "parameters": {
+        "symbols": [
+          { "type": "ref", "value": "name" },
+          { "type": "const", "value": "s" }
+        ]
+      }
+    },
+    "table": {
+      "type": "generated",
+      "generator": "coalesce",
+      "parameters": {
+        "sourceVariableName": "tableParameter",
+        "fallbackVariableName": "tableFallback"
+      },
+      "replaces": "SET-THE-TABLE"
+    }
+  },
+  "primaryOutputs": [
+    { "path": "Entities/Widget.cs" },
+    { "path": "Data/Configurations/WidgetConfiguration.cs" },
+    { "path": "Interfaces/Repositories/IWidgetRepository.cs" },
+    { "path": "Repositories/WidgetRepository.cs" }
+  ]
+}

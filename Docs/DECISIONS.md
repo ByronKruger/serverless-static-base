@@ -17,6 +17,12 @@ When this file becomes hard to scan (roughly 8-15 accepted entries, or one entry
 | D-0007 | First name and surname are required for new accounts, and nullable in the database | Accepted | 2026-09-20 |
 | D-0008 | Cross-cutting API code lives in one `Platform.Common` library; the product owns controllers and migrations | Accepted | 2026-10-01 |
 | D-0009 | Registration is generic over the product's `DbContext` and is told the product's assembly | Proposed | 2026-10-01 |
+| D-0010 | The repository is the library: no reference host, and a company-scoped name | Proposed | 2026-10-03 |
+| D-0011 | Item templates ship as a separate Template package | Proposed | 2026-10-03 |
+
+Entries D-0001 to D-0009 were written while the library was called `Platform.Common`, and
+their text is left as it was written. **D-0010 carries the rename and the old-to-new name
+mapping**; read it before taking an identifier out of an older entry.
 
 ## Template (copy for each new entry)
 
@@ -377,3 +383,151 @@ Consequences
   implementing IEntityTypeConfiguration were found while scanning assembly 'Platform.Api'`
   for a host that has added no tables yet. That warning is the product's own scan working,
   not a fault.
+
+---
+
+## D-0010 - The repository is the library: no reference host, and a company-scoped name
+
+Status: Proposed
+Date: 2026-10-03
+Deciders: proposed by agent, pending human
+
+Context
+- D-0008 split one project into a `Platform.Common` library plus a reference host, and kept
+  the host in this repository as the example of what a product writes. `src/web`, the Angular
+  client of the project this base was carved out of, was left in place to be stripped later.
+- Two things followed from that and both turned out to be costs. The repository contained a
+  consumer of its own library, so "would this file make sense in an API that has never heard
+  of this product's domain" had a live counter-example sitting next to the library, and the
+  host's `Program.cs`, `AppDbContext`, controllers and settings were read as the library's
+  documentation while being compiled as the library's dependant. And `src/web` was never
+  stripped: it stayed a beverage-preferences SPA in a repository that claims to name no
+  product noun.
+- The name `Platform` names nothing. It was a placeholder from the project this was carved
+  out of, and a package id has to be a real name before anyone can publish it.
+
+Decision
+- In the context of turning this repository into a publishable base, facing a library that
+  shipped alongside its own consumer, we chose to make the repository **only** the library
+  and its item templates - `HopeTech.Common` at the root, `src/templates` beside it, no host
+  project and no client application - and to rename the library and its public surface to the
+  company name, to achieve a repository where every file is either the library, something
+  that tests it, or something that scaffolds a consumer, accepting that the reference host
+  stops being compiled and is therefore only proven by scaffolding it.
+
+The rename, which every entry above this one predates:
+
+| Before | After |
+| --- | --- |
+| `Platform.Common` (assembly, namespaces) | `HopeTech.Common` |
+| `AddPlatformApi<TDbContext>` | `AddHopeTechApi<TDbContext>` |
+| `UsePlatformApiPipeline` | `UseHopeTechApiPipeline` |
+| `PlatformIdentityDbContext` | `HopeTechIdentityDbContext` |
+| `CorsOptions.PolicyName` value `"PlatformWebClient"` | `"HopeTechWebClient"` |
+| `src/platform/Platform.Common/` | `HopeTech.Common/` |
+| `tests/Application.Tests` | `tests/HopeTech.Common.Tests` |
+
+D-0008's horizontal seam is unchanged and still binding: cross-cutting code in one library,
+controllers and migrations owned by the product. What this entry changes is only where the
+product side of that seam lives - in a consumer's repository, scaffolded, rather than in this
+one, compiled. **D-0008's own status needs a human call**: its decision stands, while one of
+its consequences - "a new product writes `Program.cs`, a `DbContext`, and controllers", as
+demonstrated by an in-repo host - no longer describes this repository.
+
+Options considered
+- Library and templates only, renamed (chosen).
+- Keep the reference host, strip `src/web`: the host keeps compiling, which is real
+  verification that the library composes. Rejected because it is verification of the wrong
+  thing - that a host compiles against a `ProjectReference`, not that a consumer can install
+  the package and scaffold a working API - and because a consumer in the repository is a
+  standing invitation to let product nouns back in.
+- Keep the reference host in a second repository: the same verification, none of the
+  contamination. Not rejected, just not needed yet; the templates plus their
+  scaffold-and-build loop cover it, and a second repository is a second thing to keep in step.
+- Rename to something domain-neutral (`Api.Common`, `Web.Common`): no company coupling, but a
+  package id that generic will collide, and the company name is the honest description of who
+  owns this.
+
+Consequences
+- Good: the architecture invariant is now structural. There is no product in the repository to
+  leak a noun from, and no file that is both documentation and dependant.
+- Good: the host shape is still version-controlled, as `htc-host` and `htc-resource`, and it
+  is now runnable rather than only readable.
+- Bad: nothing in `dotnet build` proves a consumer can be composed. That proof moved into the
+  pack-install-scaffold-build loop in `src/templates/AGENTS.md`, which a person has to
+  remember to run. This is the real cost of the entry.
+- Bad: the API integration suite went with the host. `tests/Api.Tests` asserted
+  problem-details shape and status codes over the real pipeline, and no test in this
+  repository does that now. The library's `ResultExtensions` is the mapping it was guarding.
+- Bad: every consumer takes a breaking rename. Namespaces and two method names are compile
+  errors, which is fine; `CorsOptions.PolicyName`'s value is a string, which is not.
+- Follow-up: decide whether to restore pipeline-level coverage, either as a test project in
+  this repository that hosts the library behind a minimal in-test `DbContext`, or by
+  scaffolding from the templates in CI and running a suite there. The second is the stronger
+  test and the slower one.
+- Follow-up: `NuGet.config` still names the old project's private feed, and the feed URL is
+  not something this repository can rename. Left as it is, deliberately.
+
+---
+
+## D-0011 - Item templates ship as a separate Template package
+
+Status: Proposed
+Date: 2026-10-03
+Deciders: proposed by agent, pending human
+
+Context
+- With no reference host in the repository (D-0010), the files a consumer writes for itself -
+  `Program.cs`, the product `DbContext`, a controller, a service pair, an entity and its
+  repository - have to arrive some other way, or every consumer re-derives them from prose.
+- The obvious shape, a folder of examples inside the library package, does not work. The
+  template engine loads a package only when its `PackageType` is `Template`, so a consumer
+  with a `PackageReference` to the library would have the files on disk and `dotnet new`
+  would still not see them. `PackageType=Template` also means no `lib/`, so one package
+  cannot be both the runtime dependency and the template source.
+
+Decision
+- In the context of shipping the code a consumer writes around the library, facing a template
+  engine that only loads packages marked as templates, we chose a second project -
+  `HopeTech.Common.Templates`, `PackageType=Template`, content-only, installed with
+  `dotnet new install` and never referenced - to achieve scaffolding that is a command rather
+  than a copy-paste, accepting a second package to version and a repository whose
+  `dotnet build` does not compile a large fraction of its own source.
+
+The templates are **item** templates, not project templates: they drop files into a project
+the consumer already has, which is what lets `htc-resource` and `htc-entity` be run many
+times in one project while `htc-host` is run once.
+
+Options considered
+- A separate `PackageType=Template` package (chosen).
+- A folder of examples in the library package: zero new packages, and `dotnet new` never sees
+  it. Not a trade-off, just wrong.
+- A folder of examples in the repository, copied by hand: no package, no engine, no parameter
+  substitution - so every consumer hand-edits namespaces and type names, which is the error
+  the engine exists to remove.
+- Project templates instead of item templates (`dotnet new htc-api`): one command for a whole
+  host. Rejected for now because the interesting repetition is per-resource, not per-project,
+  and a project template cannot be run a second time to add the fifth resource. Worth adding
+  later *alongside* these, not instead of them.
+- A source generator or an analyzer with code fixes: scaffolding that cannot drift from the
+  library it ships with. A much larger thing to build and a much worse fit - the output here
+  is files a consumer owns and edits, not generated code they must not touch.
+
+Consequences
+- Good: `dotnet new htc-resource -n Order` produces a resource whose namespaces, type names,
+  folder layout and authorization policy are already right, in the shape
+  `Docs/ARCHITECTURE.md` locks.
+- Good: the public surface now has a second place it is written down that breaks loudly. A
+  rename in the library that is not mirrored in a template produces a template that scaffolds
+  code which does not compile.
+- Bad: template bodies are `Content` with `Compile` removed, so the repository's own build
+  says nothing about them. Verification is pack, install, scaffold into a throwaway project,
+  build that. The loop is in `src/templates/AGENTS.md`; nothing enforces it.
+- Bad: the namespace substitution reads `RootNamespace` through an `msbuild:` bind, which
+  resolves only in a project that has been **restored**. In an unrestored one it silently
+  falls back to the placeholder namespace. This is the most likely false bug report against
+  the templates.
+- Bad: plurals are formed by appending `s`, because `sourceName` replacement cannot be given a
+  second token that contains the first. `-n Company` yields `CompanysController`, renamed by
+  hand.
+- Follow-up: a project template (`htc-api`) once the per-resource templates have settled.

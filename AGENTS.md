@@ -2,9 +2,14 @@
 
 This file is the shared source of truth for repo conventions for all agents. Keep it short and use it as a map to the deeper project and domain documentation.
 
-This repository is a **base for new API projects**, not a product. A .NET 9 class library, nullable enabled, warnings as errors. It holds the cross-cutting
-machinery of an ASP.NET Core Web API and nothing else (D-0008). The cross-cutting concerns live in `src/platform/Platform.Common` and `src/templates` Company.COmmon.Templates is a project that is a collection of dotnet item templates for commonly occuring work pieces in ASP.NET API development. 
-The library names no product noun anywhere, including in its comments.
+This repository **is** the library. It is not a product and it holds no product: a .NET 9 class library of the cross-cutting machinery of an ASP.NET Core Web API, nullable enabled, warnings as errors (D-0008, D-0010). There is no reference host and no client application here - an API implementation that consumes the library lives in its own repository. The library names no product noun anywhere, including in its comments.
+
+Two projects, and only two:
+
+- **`HopeTech.Common`** - the library, at the repository root. A runtime dependency: a consumer takes it by `PackageReference`.
+- **`src/templates`** - `HopeTech.Common.Templates`, a collection of `dotnet new` **item** templates that scaffold the directory structures and code files an API built on the library keeps re-deriving. Not a runtime dependency; a consumer installs it with `dotnet new install` (D-0011).
+
+Templates cannot live inside the library package. The template engine only loads packages whose `PackageType` is `Template`, so a consumer referencing the library would have the files on disk and `dotnet new` would still not see them. That is why there is a second project rather than a folder.
 
 ## Required Reading
 
@@ -15,20 +20,27 @@ The library names no product noun anywhere, including in its comments.
 ## Repository Map
 
 | Area | Purpose |
+| --- | --- |
+| `HopeTech.Common/` | The reusable library: auth, authz, problem details, result pattern, options, pipeline |
+| `src/templates/` | `HopeTech.Common.Templates`: `dotnet new` item templates for the library's consumers |
+| `tests/HopeTech.Common.Tests/` | The library's own tests. Fake ports only - no ASP.NET, no `DbContext`, no database |
 | `Docs/domain` | System-of-record business and implementation knowledge |
 | `Docs/superpowers` | Current Superpowers specs and implementation plans for agent-driven work |
-| `src/platform/Platform.Common` | The reusable library: auth, authz, problem details, result pattern, options, pipeline |
-| `src/platform/Platform.Template` | Reference ASP.NET host over the library, and the collection of dotnet item templates for a product |
+| `Docs/ARCHITECTURE.md` | The locks every change must respect |
+| `Docs/DECISIONS.md` | Architecture decision records |
+| `CHANGELOG.md` | What changed for a consumer, per release |
 
 ## Where things go
 
+### `HopeTech.Common/` - the library
+
 | Folder | Holds | Never holds |
 | --- | --- | --- |
-| `Identity/` | `AppUser`, `AppRole`, their configurations, `PlatformIdentityDbContext`, `IdentityUserRepository` | A product's entities, or any migration |
+| `Identity/` | `AppUser`, `AppRole`, their configurations, `HopeTechIdentityDbContext`, `IdentityUserRepository` | A product's entities, or any migration |
 | `Abstractions/` | Ports: `IClock`, `ICurrentUser`, `IAccessTokenFactory`, `IUserRepository`, `IAuthService` | Implementations |
 | `Authorization/` | `Policies`, `Roles` name constants | Ad-hoc role strings anywhere else |
 | `Errors/` | `GlobalExceptionHandler` | Control flow for expected misses |
-| `Extensions/` | `AddPlatformApi<TDbContext>`, `UsePlatformApiPipeline`, and the `Add*` each composes | Anything a product registers |
+| `Extensions/` | `AddHopeTechApi<TDbContext>`, `UseHopeTechApiPipeline`, and the `Add*` each composes | Anything a product registers |
 | `Http/` | `ApiControllerBase`, `ResultExtensions`, `HttpContextCurrentUser`, `KebabCaseParameterTransformer` | Controllers (D-0008) |
 | `Mapping/` | AutoMapper profiles for the library's own contracts | |
 | `Options/` | Options classes with validation attributes, and their configurators | |
@@ -47,26 +59,62 @@ Two things the library deliberately does **not** ship, each argued in D-0008:
   of a dependency version. `ApiControllerBase` is the part worth sharing.
 - **Migrations.** Two consumers have different tables and cannot share a
   `__EFMigrationsHistory`. The library ships the entity types and their
-  `IEntityTypeConfiguration<T>`s for database table (entities) that cover cross-cutting concerns; the product scaffolds the migration.
+  `IEntityTypeConfiguration<T>`s for database tables (entities) that cover cross-cutting
+  concerns; the product scaffolds the migration.
 
+TODO: remove (becomes self-explanatory)
+A third thing it no longer ships: **a reference host**. What a product writes - `Program.cs`,
+its `DbContext`, its controllers - is now a template under `src/templates/items/`, not a
+project in this repository (D-0010). The host shape is still version-controlled; it is just
+version-controlled as something a consumer can run rather than something this solution builds.
+
+### `src/templates/` - the item templates
+
+One directory per template under `src/templates/items/`, each with its own
+`.template.config/template.json`. See `src/templates/AGENTS.md` before adding or editing one.
+Template bodies are **not compiled by this repository** - the project excludes them from
+`Compile` on purpose - so a change to one is only verified by installing the pack and
+scaffolding into a throwaway project. `src/templates/AGENTS.md` has the loop.
 
 ## Architecture Invariants
 
-The library names no product noun anywhere, including in its comments. The library never pollutes it's domain with that of a specific consumer product API.
+The library names no product noun anywhere, including in its comments. The library never
+pollutes its domain with that of a specific consumer product API. Nothing in this repository
+consumes the library except `tests/HopeTech.Common.Tests`, and those tests exercise the
+library's own types - they are not an example API.
 
 ## Harness Commands
 
-- Standard command usage for both `src/api`. ASP.NET: 'dotnet' based commands, e.g. 'dotnet run', 'dotnet build', EF ('dotnet-ef data migrations add', 'dotnet-ef database update').
+```bash
+dotnet build                 # the solution, warnings as errors
+dotnet test                  # the library's tests
+dotnet pack -c Release -o artifacts   # both packages
+```
+
+Verifying a template change needs its own loop, because nothing in `dotnet build` covers it:
+
+```bash
+dotnet pack src/templates/HopeTech.Common.Templates.csproj -o <tmp>
+dotnet new install <tmp>/HopeTech.Common.Templates.1.0.0.nupkg
+# scaffold into a throwaway restored web project, then build it
+dotnet new uninstall HopeTech.Common.Templates
+```
 
 ## Documentation Rules
 
 - This file (`AGENTS.md`) is a table of contents and guardrail file, not an encyclopedia.
 - Domain knowledge belongs in `Docs/domain`, indexed by `Docs/domain/README.md`.
-- Accepted architecture-wide decisions belong in `Docs/ARCHITECTURE.md`
+- Accepted architecture-wide decisions belong in `Docs/ARCHITECTURE.md`.
 - Architecture decision records live in `Docs/DECISIONS.md` (indexed by the same file).
 - When docs and code disagree, trust the code, fix the docs, and mention the drift.
-- Whenever a change that is of the nature of cross-cutting concerns for ASP.NET APIs of the following nature: changes the consumer contract, adds new functionality, etc. Add this change/addition to the consumer guide and `README.md` and `CHANGELOG.md` respectively.
-- Alter configuration ("CompanyCommon" json object), public surface registrations, item templates and example usage and quick start guide content whenever new cross-cutting concern functionality is added or changes in a way that would be useful for consumers to know about the changes in the Library Readme.
+- Whenever a change is of the nature of cross-cutting concerns for ASP.NET APIs - it changes
+  the consumer contract, adds new functionality, and so on - record it in the consumer guide
+  (`README.md`) and in `CHANGELOG.md`.
+- Alter configuration (the `Authentication` / `Cors` / `Database` sections), public surface
+  registrations, item templates, and the quick-start content in `README.md` whenever new
+  cross-cutting functionality is added or changes in a way a consumer would want to know
+  about. A change to the public surface that is not reflected in an item template is an
+  incomplete change.
 
 ## Planning Rules
 
@@ -77,12 +125,12 @@ The library names no product noun anywhere, including in its comments. The libra
 
 ## Superpowers stop condition
 
-- After requirements/grill, write a spec. After spec approval, write a plan. Stop. Do not invoke executing-plans, subagent-driven-development, bootstrap skills, or application code until the human has read that plan file and replied with an explicit go (e.g. “execute the plan” plus an execution method). Existence of `Docs/superpowers/plans/*.md` is not authorization.
+- After requirements/grill, write a spec. After spec approval, write a plan. Stop. Do not invoke executing-plans, subagent-driven-development, bootstrap skills, or application code until the human has read that plan file and replied with an explicit go (e.g. "execute the plan" plus an execution method). Existence of `Docs/superpowers/plans/*.md` is not authorization.
 
 ## Architecture decisions
 
 - This file (`AGENTS.md`) does not record decisions. It only tells you how to read and write them.
-- Architecture decision records live in `Docs/DECISIONS.md`, and is also indexed by the same file (`Docs/DECISION.md`).
+- Architecture decision records live in `Docs/DECISIONS.md`, and are indexed by the same file.
 
 ### Before you change structure, stack or contracts
 
@@ -96,10 +144,10 @@ The library names no product noun anywhere, including in its comments. The libra
 ### When you must write a decision
 
 Write a new entry in `DECISIONS.md` when the work does any of the following:
-- Chooses or changes a framework, language, runtime, or major library (UI, API, ORM, auth, messaging, hosting, etc.).
+- Chooses or changes a framework, language, runtime, or major library (API, ORM, auth, messaging, hosting, etc.).
 - Sets a cross-cutting convention: folder layout, API shape, error model, auth scheme, naming, layering, mapping style.
-- Binds the frontend and API together (DTO ownership, versioning, CORS, BFF vs direct calls, OpenAPI generation).
-- Accepts a durable trade-off (consistency vs availability, code-first vs schema-first, SSR vs SPA, sync vs async).
+- Changes what the library hands a consumer, or what a consumer must write for itself.
+- Accepts a durable trade-off (consistency vs availability, code-first vs schema-first, sync vs async).
 - Rejects a plausible alternative that a future agent would otherwise re-propose.
 
 Do **not** write an entry for: typo fixes, local refactors that stay inside an accepted decision, adding a feature that follows existing patterns, or one-off implementation details.
@@ -108,11 +156,11 @@ If you are unsure whether it is a decision, write the entry as `Proposed` and as
 
 ### How to append an entry
 
-- Never rewrite history. Do not edit the Decision, Context or Consequence of an `Accepted` entry except to add a `Superseded by D-NNNN` line.
+- Never rewrite history. Do not edit the Decision, Context or Consequence of an `Accepted` entry except to add a `Superseded by D-NNNN` line. Identifiers inside a historical entry stay as they were written, even after a rename; the entry that performed the rename carries the mapping.
 - New work that replaces an old choice: add a new numbered entry, set the old entry to `Superseded by D-NNNN`, set the new entry to `Accepted` only if the human confirmed it; otherwise leave it `Proposed`.
 - Assign next free `D-NNNN`. Do not reuse ids.
 - Newest entries go at the **bottom**.
-- Keep the index table at the top of `DECISIONS.md` in async (id, title, status, date).
+- Keep the index table at the top of `DECISIONS.md` in sync (id, title, status, date).
 - One decision per entry. Split if you are smuggling two or more choices into one record.
 - Fill every required heading in the template already in `DECISIONS.md`. Empty "N/A" sections are worse than omitting an optional heading; omit only what the template marks optional.
 - Prefer a short Y-statement in the Decision section: `In the context of <situation>, facing <concern>, we chose <option> to achieve <goal>, accepting <trade-off>.`
@@ -121,7 +169,7 @@ If you are unsure whether it is a decision, write the entry as `Proposed` and as
 
 Use only: `Proposed`, `Accepted`, `Deprecated`, `Superseded by D-NNNN`, `Rejected`.
 
-Agents may create `Proposed` entries. Agents may not mark an entry `Accepted` unless the user explicitly accepted it in this session or the entry is a mechanical split of an already-accepted decision during a later migration to `adr/`
+Agents may create `Proposed` entries. Agents may not mark an entry `Accepted` unless the user explicitly accepted it in this session or the entry is a mechanical split of an already-accepted decision during a later migration to `adr/`.
 
 ### What not to do
 
@@ -156,5 +204,6 @@ were already the same outcome.
 ## Error codes
 
 `AuthService` keeps its one error as a private member. That is the right shape when a code has
-a single caller. A code with two callers earns a named static
-class in the owning project - in a product, that is `src/api/Results/`.
+a single caller. A code with two callers earns a named static class in the owning project -
+in a consumer product, that is its own `Results/` folder, which is what the `htc-resource`
+item template scaffolds.

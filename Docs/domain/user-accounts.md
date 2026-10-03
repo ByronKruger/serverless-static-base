@@ -6,11 +6,11 @@ topics:
   - Sign in
   - Sign out
 codeReferences:
-  - src/platform/Platform.Common/Services/AuthService.cs
-  - src/platform/Platform.Common/Identity/AppUser.cs
-  - src/web/src/app/features/auth
+  - HopeTech.Common/Services/AuthService.cs
+  - HopeTech.Common/Identity/AppUser.cs
+  - HopeTech.Common/Contracts/
 generatedDate: 2026-09-18
-lastVerified: 2026-10-01
+lastVerified: 2026-10-03
 ---
 
 # Overview of User Accounts

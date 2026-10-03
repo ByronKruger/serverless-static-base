@@ -1,8 +1,14 @@
 <Project>
 
   <!--
-    Central Package Management: every PackageReference version lives here so the
-    API and both test projects can never drift apart.
+    Central Package Management: every PackageReference version lives here so the library
+    and its test project can never drift apart, and so a consumer can read one file to see
+    what versions this library was built and tested against.
+
+    Some entries are pinned but unreferenced on purpose. Microsoft.EntityFrameworkCore.Design
+    is what a consumer adds for `dotnet ef`; Mvc.Testing and EntityFrameworkCore.InMemory are
+    what pipeline-level coverage would need if D-0010s follow-up restores it. Pinning them
+    here keeps that cheap and keeps the version band consistent.
   -->
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>

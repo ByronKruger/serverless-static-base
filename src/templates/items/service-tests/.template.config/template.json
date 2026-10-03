@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "HopeTech",
+  "classifications": [ "Web", "WebAPI", "HopeTech.Common", "Test" ],
+  "identity": "HopeTech.Common.Templates.ServiceTests",
+  "groupIdentity": "HopeTech.Common.Templates.ServiceTests",
+  "name": "HopeTech.Common service tests",
+  "description": "An xUnit fixture for one application service, plus the two fake ports it leans on. Fake ports and a real mapper - no mocking framework, no ASP.NET, no DbContext, no database. The unit half of the two tests every endpoint owes.",
+  "shortName": "htc-service-tests",
+  "tags": {
+    "language": "C#",
+    "type": "item"
+  },
+  "sourceName": "Widget",
+  "defaultName": "Widget",
+  "preferNameDirectory": false,
+  "symbols": {
+    "productNamespace": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "HopeTech.Api",
+      "defaultValue": "HopeTech.Api",
+      "description": "Root namespace of the project under test. The fixture lands in '<that>.Tests', which is the convention this base follows."
+    },
+    "skipFakes": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "Omit the fake clock and fake current user, for a test project that already has them."
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "condition": "(skipFakes)",
+          "exclude": [ "Fakes/**" ]
+        }
+      ]
+    }
+  ],
+  "primaryOutputs": [
+    { "path": "Services/WidgetServiceTests.cs" }
+  ]
+}

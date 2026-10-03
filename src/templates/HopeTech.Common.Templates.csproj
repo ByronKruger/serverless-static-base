@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    A template package, not a library. The template engine only loads packages whose
+    PackageType is Template, so these cannot ship inside HopeTech.Common - a consumer
+    would have the files on disk and `dotnet new` would still not see them (D-0010).
+
+    Nothing here is a runtime dependency. A consumer installs it with
+    `dotnet new install HopeTech.Common.Templates` and never references it.
+  -->
+  <PropertyGroup>
+    <PackageType>Template</PackageType>
+    <PackageId>HopeTech.Common.Templates</PackageId>
+    <Title>HopeTech.Common item templates</Title>
+    <PackageVersion>1.0.0</PackageVersion>
+    <Description>
+      `dotnet new` item templates for an ASP.NET Core Web API built on HopeTech.Common:
+      the host composition root, a REST resource across every horizontal layer, a
+      controller, a service pair, an entity with its repository, a validated request,
+      and a service test fixture.
+    </Description>
+    <PackageTags>dotnet-new;templates;aspnetcore;api</PackageTags>
+    <IsPackable>true</IsPackable>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
+    <!-- The payload is content, not a compiled assembly. -->
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <ContentTargetFolders>content</ContentTargetFolders>
+    <!-- NU5128: a package with no lib/ or ref/ assets. Correct for this package type. -->
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <!-- Without this, `.template.config` is excluded as a dotfile and nothing is a template. -->
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+  </PropertyGroup>
+
+  <!--
+    The template content is source for the *consumer*, not for this project. Compiling it
+    here would fail - it references namespaces this project does not have - and would be
+    wrong even if it compiled, because a template body is allowed to be a stub.
+  -->
+  <ItemGroup>
+    <Content Include="items\**\*" Exclude="items\**\bin\**;items\**\obj\**" />
+    <Compile Remove="**\*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="/" Visible="false" />
+  </ItemGroup>
+
+</Project>

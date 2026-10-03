@@ -24,16 +24,8 @@ appsettings.*.Local.json
 secrets.json
 *.pfx
 
-# ---------------------------------------------------------------------------
-# Node / Angular
-# ---------------------------------------------------------------------------
-node_modules/
-dist/
-.angular/
-*.tsbuildinfo
-npm-debug.log*
-yarn-error.log
-.vitest/
+# Package output.
+artifacts/
 
 # ---------------------------------------------------------------------------
 # Editors and OS

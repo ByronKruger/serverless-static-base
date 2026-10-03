@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "HopeTech",
+  "classifications": [ "Web", "WebAPI", "HopeTech.Common" ],
+  "identity": "HopeTech.Common.Templates.Service",
+  "groupIdentity": "HopeTech.Common.Templates.Service",
+  "name": "HopeTech.Common application service",
+  "description": "The I{Resource}Service / {Resource}Service pair: one public method per use case, Result<T> for expected failure, no ASP.NET types. The port and its implementation, side by side.",
+  "shortName": "htc-service",
+  "tags": {
+    "language": "C#",
+    "type": "item"
+  },
+  "sourceName": "Widget",
+  "defaultName": "Widget",
+  "preferNameDirectory": false,
+  "symbols": {
+    "rootNamespace": {
+      "type": "bind",
+      "binding": "msbuild:RootNamespace",
+      "replaces": "HopeTech.Api",
+      "defaultValue": "HopeTech.Api",
+      "description": "Taken from the host project's RootNamespace."
+    }
+  },
+  "primaryOutputs": [
+    { "path": "Interfaces/Services/IWidgetService.cs" },
+    { "path": "Services/WidgetService.cs" }
+  ]
+}

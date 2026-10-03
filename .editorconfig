@@ -1,5 +1,5 @@
-# Repo-wide editor settings. The Angular workspace keeps its own .editorconfig for
-# web files; this one covers the solution and C#.
+# Repo-wide editor settings. Covers the solution, C#, and the item-template bodies under
+# src/templates/items, which are source for a consumer rather than for this repository.
 root = true
 
 [*]

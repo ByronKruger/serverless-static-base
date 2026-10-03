@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "HopeTech",
+  "classifications": [ "Web", "WebAPI", "HopeTech.Common" ],
+  "identity": "HopeTech.Common.Templates.Host",
+  "groupIdentity": "HopeTech.Common.Templates.Host",
+  "name": "HopeTech.Common API host",
+  "description": "The composition root for an API on HopeTech.Common: Program.cs, the product DbContext, validated settings, launch profiles, and a health endpoint. Run it once, inside a restored Microsoft.NET.Sdk.Web project, with --force so it may replace the files `dotnet new web` left behind.",
+  "shortName": "htc-host",
+  "tags": {
+    "language": "C#",
+    "type": "item"
+  },
+  "preferNameDirectory": false,
+  "symbols": {
+    "rootNamespace": {
+      "type": "bind",
+      "binding": "msbuild:RootNamespace",
+      "replaces": "HopeTech.Api",
+      "defaultValue": "HopeTech.Api",
+      "description": "Read from the host project's RootNamespace. Resolves only in a project that has been restored - in an unrestored one the namespaces come out as the default and have to be fixed by hand."
+    },
+    "dbContext": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "AppDbContext",
+      "fileRename": "AppDbContext",
+      "defaultValue": "AppDbContext",
+      "description": "The name of the product's EF Core context. Deliberately not taken from -n: an item template's -n defaults to the output directory name, which is never what a context should be called."
+    },
+    "audience": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "SET-THE-AUDIENCE",
+      "defaultValue": "my-api",
+      "description": "The JWT audience this API accepts, written into appsettings.Development.json."
+    },
+    "database": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "SET-THE-DATABASE",
+      "defaultValue": "MyApi",
+      "description": "The LocalDB database name for development."
+    },
+    "webOrigin": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "http://localhost:4200",
+      "defaultValue": "http://localhost:4200",
+      "description": "The browser origin allowed through CORS in development."
+    },
+    "skipLaunchSettings": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "Omit Properties/launchSettings.json, for a project whose launch profiles are already right."
+    },
+    "skipHealthEndpoint": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "Omit the health controller and its response contract."
+    },
+    "skipAuthEndpoints": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "Omit the register and sign-in controller. The library supplies IAuthService and the contracts either way; without this controller nothing exposes them over HTTP."
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "condition": "(skipLaunchSettings)",
+          "exclude": [ "Properties/**" ]
+        },
+        {
+          "condition": "(skipHealthEndpoint)",
+          "exclude": [ "Controllers/HealthController.cs", "Dtos/HealthResponse.cs" ]
+        },
+        {
+          "condition": "(skipAuthEndpoints)",
+          "exclude": [ "Controllers/AuthController.cs" ]
+        }
+      ]
+    }
+  ],
+  "primaryOutputs": [
+    { "path": "Program.cs" },
+    { "path": "Data/AppDbContext.cs" },
+    { "path": "Controllers/AuthController.cs" }
+  ]
+}

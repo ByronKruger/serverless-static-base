@@ -6,9 +6,11 @@ topics:
   - Edit user role
   - role-based access-control
 codeReferences:
-  - 
+  - HopeTech.Common/Authorization/Roles.cs
+  - HopeTech.Common/Authorization/Policies.cs
+  - HopeTech.Common/Identity/AppRoleConfiguration.cs
 generatedDate: 2026-04-24
-lastVerified: 2026-04-28
+lastVerified: 2026-10-03
 ---
 
 # Overview of User Permissions

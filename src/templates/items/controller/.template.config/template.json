@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "HopeTech",
+  "classifications": [ "Web", "WebAPI", "HopeTech.Common" ],
+  "identity": "HopeTech.Common.Templates.Controller",
+  "groupIdentity": "HopeTech.Common.Templates.Controller",
+  "name": "HopeTech.Common API controller",
+  "description": "A thin controller on ApiControllerBase for a REST noun whose service already exists. Authorized by default, kebab-cased route, Result translated by the base class.",
+  "shortName": "htc-controller",
+  "tags": {
+    "language": "C#",
+    "type": "item"
+  },
+  "sourceName": "Widget",
+  "defaultName": "Widget",
+  "preferNameDirectory": false,
+  "symbols": {
+    "rootNamespace": {
+      "type": "bind",
+      "binding": "msbuild:RootNamespace",
+      "replaces": "HopeTech.Api",
+      "defaultValue": "HopeTech.Api",
+      "description": "Taken from the host project's RootNamespace."
+    },
+    "policy": {
+      "type": "parameter",
+      "datatype": "choice",
+      "choices": [
+        { "choice": "RequireModerator", "description": "Policies.RequireModerator - Moderator or Administrator." },
+        { "choice": "RequireAdministrator", "description": "Policies.RequireAdministrator - Administrator only." }
+      ],
+      "defaultValue": "RequireModerator",
+      "replaces": "RequireModerator",
+      "description": "The named policy on the writing actions."
+    }
+  },
+  "primaryOutputs": [
+    { "path": "Controllers/WidgetsController.cs" }
+  ]
+}

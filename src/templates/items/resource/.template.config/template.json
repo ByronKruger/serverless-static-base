@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "HopeTech",
+  "classifications": [ "Web", "WebAPI", "HopeTech.Common" ],
+  "identity": "HopeTech.Common.Templates.Resource",
+  "groupIdentity": "HopeTech.Common.Templates.Resource",
+  "name": "HopeTech.Common API resource",
+  "description": "One REST noun across every horizontal layer: a thin controller on ApiControllerBase, the service pair returning Result<T>, request and response contracts, a FluentValidation validator, and an error-code class.",
+  "shortName": "htc-resource",
+  "tags": {
+    "language": "C#",
+    "type": "item"
+  },
+  "sourceName": "Widget",
+  "defaultName": "Widget",
+  "preferNameDirectory": false,
+  "symbols": {
+    "rootNamespace": {
+      "type": "bind",
+      "binding": "msbuild:RootNamespace",
+      "replaces": "HopeTech.Api",
+      "defaultValue": "HopeTech.Api",
+      "description": "Taken from the host project's RootNamespace."
+    },
+    "policy": {
+      "type": "parameter",
+      "datatype": "choice",
+      "choices": [
+        {
+          "choice": "RequireModerator",
+          "description": "Policies.RequireModerator - Moderator or Administrator."
+        },
+        {
+          "choice": "RequireAdministrator",
+          "description": "Policies.RequireAdministrator - Administrator only."
+        }
+      ],
+      "defaultValue": "RequireModerator",
+      "replaces": "RequireModerator",
+      "description": "The named policy on the writing actions. Reads inherit the default-deny fallback, which is any authenticated caller; delete the attribute to leave a write there too."
+    },
+    "skipValidator": {
+      "type": "parameter",
+      "datatype": "bool",
+      "defaultValue": "false",
+      "description": "Omit the request validator. Only correct when the request carries no rules at all - nothing else references it, so excluding it still compiles."
+    }
+  },
+  "sources": [
+    {
+      "modifiers": [
+        {
+          "condition": "(skipValidator)",
+          "exclude": [ "Validation/**" ]
+        }
+      ]
+    }
+  ],
+  "primaryOutputs": [
+    { "path": "Controllers/WidgetsController.cs" },
+    { "path": "Services/WidgetService.cs" }
+  ]
+}
